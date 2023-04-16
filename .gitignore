@@ -1,0 +1,10 @@
+/*.csv
+/*.json
+/json
+.idea
+/*.db
+/results
+/src/data/*
+/atjobs
+/data
+/json_dir

@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    container_name: container_sport
+    environment:
+      POSTGRES_PASSWORD: sport2584
+      PGTZ: 'UTC'
+    ports:
+      - 5432:5432
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
