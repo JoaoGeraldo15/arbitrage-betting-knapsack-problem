@@ -1,4 +1,6 @@
-from src.service import EventService, GameService
+from src.service.event_service import EventService
+from src.service.game_service import GameService
+
 
 if __name__ == '__main__':
     event_service = EventService()

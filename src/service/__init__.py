@@ -1,3 +1,5 @@
-from src.service.event_service import EventService
-from src.service.game_service import GameService
-from src.service.at_task_service import AtTaskService
+from injectable import load_injection_container
+from src.config.config import SERVICE_PATH, REPOSITORY_PATH
+
+load_injection_container(REPOSITORY_PATH)
+load_injection_container(SERVICE_PATH)

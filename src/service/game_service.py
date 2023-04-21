@@ -2,14 +2,14 @@ import json
 import time
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timedelta, date
+from datetime import datetime, date, timezone, timedelta
 from typing import List
 
 import pytz
 import requests
 from injectable import autowired, Autowired
 
-from src.config.config import API_KEY, HOST
+from src.config.config import API_KEY
 from src.model.models import Game, Bookmaker, Market, Outcome
 from src.repository.game_repository import GameRepository
 from src.schema.schema import GameBase
@@ -124,7 +124,7 @@ class GameService:
         with open('../../log/log_jogos', 'w') as f:
             f.write(log)
 
-        file_name = f"[{datetime.now().strftime('%H:%M:%S')}]_{date.today().strftime('%d_%m_%Y')}_{str(uuid.uuid4())}.json"
+        file_name = f"{date.today().strftime('%d_%m_%Y')}_[{datetime.now().strftime('%H:%M:%S')}]_{str(uuid.uuid4())}.json"
         with open(f"../data/games/{file_name}", "w") as f:
             json.dump(response_list, f)
 
@@ -135,7 +135,7 @@ class GameService:
         except:
             pass
 
-        games_to_schedule = [g for g in games if g.commence_time.date() == date.today()]
+        games_to_schedule = [g for g in games if g.commence_time.date() == datetime.now(timezone.utc).date()]
         path = '/home/joaogeraldo/TCC/fetch-api/src/scripts/fetch_single_game.py'
         sp_zone = pytz.timezone('America/Sao_Paulo')
         for g in games_to_schedule:

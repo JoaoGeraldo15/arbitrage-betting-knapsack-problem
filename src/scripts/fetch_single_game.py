@@ -6,7 +6,7 @@ from datetime import datetime, date
 import requests
 
 from src.config.config import API_KEY
-from src.service import GameService
+from src.service.game_service import GameService
 
 if __name__ == '__main__':
     game_id = sys.argv[1]
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     with open('../../log/log_jogos', 'w') as f:
         f.write(log)
 
-    file_name = f"[{datetime.now().strftime('%H:%M:%S')}]_{date.today().strftime('%d_%m_%Y')}_{str(uuid.uuid4())}.json"
+    file_name = f"{date.today().strftime('%d_%m_%Y')}_[{datetime.now().strftime('%H:%M:%S')}]_{str(uuid.uuid4())}.json"
     with open(f"../data/single_game/{file_name}", "w") as f:
         json.dump(odds_response.json(), f)
 

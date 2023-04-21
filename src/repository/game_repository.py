@@ -1,7 +1,7 @@
 from typing import List
 
 from injectable import injectable
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import selectinload
 
 from src.config.connection import DBConnection
 from src.model.models import Game, Bookmaker, Market, Outcome
