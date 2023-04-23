@@ -8,6 +8,7 @@ from src.config.connection import DBConnection
 from src.model.models import Event
 from src.repository.event_repository import EventRepository
 from src.schema import EventBase
+from src.util import checkout_root_path
 
 
 @injectable
@@ -40,6 +41,7 @@ def te():
         print(i)
 
 if __name__ == '__main__':
+    checkout_root_path()
     EventService.save_events()
 
 
