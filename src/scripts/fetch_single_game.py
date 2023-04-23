@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, date
 import requests
 from src.config.config import API_KEY
+from src.schema import GameBase
 from src.service.game_service import GameService
 from src.util import checkout_root_path
 
@@ -32,7 +33,8 @@ if __name__ == '__main__':
         json.dump(odds_response.json(), f)
 
     service = GameService()
-    service.save_games(odds_response.json())
+    game = GameBase(**odds_response.json())
+    service.save_games([game])
 
 
 

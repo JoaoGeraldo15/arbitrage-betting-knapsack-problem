@@ -44,7 +44,7 @@ class MarketBase(BaseModel):
 class BookmakerBase(BaseModel):
     key: str
     title: str
-    last_update: datetime
+    last_update: Optional[datetime]
     markets: List[MarketBase]
     game_id: Optional[str]
 
