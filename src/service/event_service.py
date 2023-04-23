@@ -18,7 +18,7 @@ class EventService:
 
     @classmethod
     def save_events(cls):
-        with open("../../events/events_UTC.json", "r") as file:
+        with open("events/events_UTC.json", "r") as file:
             data = json.load(file)
         events_base = [EventBase(**event) for event in data]
 

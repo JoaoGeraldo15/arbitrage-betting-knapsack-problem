@@ -14,7 +14,7 @@ from src.model.models import Game, Bookmaker, Market, Outcome
 from src.repository.game_repository import GameRepository
 from src.schema.schema import GameBase
 from src.service.at_task_service import AtTaskService
-
+from src.config.config import SCRIPTS_PATH
 
 class GameService:
     @autowired
@@ -118,14 +118,14 @@ class GameService:
             response = requests.get(url=URL, params=params)
             games.extend(response.json())
             response_list.append(response.json())
-            time.sleep(2)
+            time.sleep(1.5)
 
         log = f"[Requests-Used]: {response.headers['X-Requests-Used']} \n[Requests-Remaining]: {response.headers['X-Requests-Remaining']} \n[Date]: {response.headers['Date']}"
-        with open('../../log/log_jogos', 'w') as f:
+        with open('log/log_jogos', 'w') as f:
             f.write(log)
 
         file_name = f"{date.today().strftime('%d_%m_%Y')}_[{datetime.now().strftime('%H:%M:%S')}]_{str(uuid.uuid4())}.json"
-        with open(f"../data/games/{file_name}", "w") as f:
+        with open(f"src/data/games/{file_name}", "w") as f:
             json.dump(response_list, f)
 
         games = [GameBase(**game) for game in games]
@@ -136,7 +136,7 @@ class GameService:
             pass
 
         games_to_schedule = [g for g in games if g.commence_time.date() == datetime.now(timezone.utc).date()]
-        path = '/home/joaogeraldo/TCC/fetch-api/src/scripts/fetch_single_game.py'
+        path = f'{SCRIPTS_PATH}/fetch_single_game.py'
         sp_zone = pytz.timezone('America/Sao_Paulo')
         for g in games_to_schedule:
             schedule_time_1 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=60)).strftime("%H:%M %Y-%m-%d")
