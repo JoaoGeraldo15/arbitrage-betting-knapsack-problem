@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/root/arbitrage-betting-knapsack-problem/src')
+sys.path.append('/root/arbitrage-betting-knapsack-problem') 
 from src.service.event_service import EventService
 from src.service.game_service import GameService
 from src.util import checkout_root_path

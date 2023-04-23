@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/root/arbitrage-betting-knapsack-problem/src')
+sys.path.append('/root/arbitrage-betting-knapsack-problem')
 import json
 import sys
 import uuid
