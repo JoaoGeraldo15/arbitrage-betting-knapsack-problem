@@ -1,5 +1,5 @@
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from injectable import injectable
 
@@ -15,5 +15,5 @@ if __name__ == '__main__':
     path = '/root/arbitrage-betting-knapsack-problem/src/scripts/fetch_single_game.py'
     param1 = '9320459d969fc583e38fb030402f82bd'
     param2 = 'soccer_spain_la_liga'
-    data = datetime.now().strftime("%H:%M %Y-%m-%d")
+    data = (datetime.now() + timedelta(minutes=2)).strftime("%H:%M %Y-%m-%d")
     service.do(path, param1, param2, data)
