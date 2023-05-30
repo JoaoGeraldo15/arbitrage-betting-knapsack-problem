@@ -4,5 +4,7 @@ requests~=2.28.2
 pytz~=2022.7.1
 psycopg2-binary
 load_dotenv
-injectable
+injectable~=3.4.7
 cprofilev
+python-dotenv~=1.0.0
+pandas~=1.5.3
