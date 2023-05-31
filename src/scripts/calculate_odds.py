@@ -24,29 +24,34 @@ if __name__ == '__main__':
     linha = { }
     for game in result:
         for bookmaker in game.bookmakers:
-            linha = {'GAME': game.id, 'BOOKMAKER': bookmaker.key.upper()}
             market_dict = defaultdict(list)
+            outcome_dict = defaultdict(list)
             for market in bookmaker.markets:
-                outcome_dict = defaultdict(list)
                 for outcome in market.outcomes:
-                    outcome_dict[outcome.update_time].append(outcome)
+                    outcome_dict[outcome.update_time].append((market.key, outcome))
 
-                for key, value in outcome_dict.items():
-                    if market.key == 'totals':
-                        key_df_1 = f"{market.key}_{value[0].name.upper()}_{value[0].point}"
-                        key_df_2 = f"{market.key}_{value[1].name.upper()}_{value[1].point}"
-                        linha[key_df_1] = value[0].price
-                        linha[key_df_2] = value[1].price
-                    elif market.key == 'h2h':
-                        key_df_1 = f"{market.key}_HOME"
-                        key_df_2 = f"{market.key}_DRAW"
-                        key_df_3 = f"{market.key}_AWAY"
-                        linha[key_df_1] = obter_odd(game.home_team, value)
-                        linha[key_df_2] = obter_odd('Draw', value)
-                        linha[key_df_3] = obter_odd(game.away_team, value)
+            for key, value in outcome_dict.items():
+                linha = {'GAME': game.id, 'BOOKMAKER': bookmaker.key.upper()}
+                update_time = value[0][1].update_time
+                totals = [item[1] for item in value if item[0] == 'totals']
+                h2h = [item[1] for item in value if item[0] == 'h2h']
 
-                    linha['update_time'] = value[0].update_time
-                    registros.append(linha)
+                if len(h2h) > 0:
+                    key_df_1 = "h2h_HOME"
+                    key_df_2 = "h2h_DRAW"
+                    key_df_3 = "h2h_AWAY"
+                    linha[key_df_1] = obter_odd(game.home_team, h2h)
+                    linha[key_df_2] = obter_odd('Draw', h2h)
+                    linha[key_df_3] = obter_odd(game.away_team, h2h)
+
+                if len(totals) > 0:
+                    key_df_1 = f"totals_{totals[0].name.upper()}_{totals[0].point}"
+                    key_df_2 = f"totals_{totals[1].name.upper()}_{totals[1].point}"
+                    linha[key_df_1] = totals[0].price
+                    linha[key_df_2] = totals[1].price
+
+                linha['update_time'] = update_time
+                registros.append(linha)
 
     colunas = []
     for registro in registros:
@@ -60,7 +65,6 @@ if __name__ == '__main__':
     df = df.fillna(0)
 
     print(df.to_string())
-
 
 # TODO para cada jogo criar uma view para facilitar o calculo, pegar a última atualização de cada jogo em cada bookmaker
 # TODO para cada jogo comparar com os n-1(bookmakers-mercado) outros e verificar se possui a condição de surebet
