@@ -1,21 +1,12 @@
 from collections import defaultdict
-from datetime import datetime
 from typing import List
 
 import pandas as pd
 
-from src.model.models import Outcome, Game
+from src.model.models import Outcome, Game, Surebet
 from src.repository.game_repository import GameRepository
 from src.repository.outcome_repository import OutcomeRepository
-
-
-class Surebet:
-    def __init__(self, games_id, bookmaker_key, over: tuple, under: tuple, update_time):
-        self.games_id = games_id
-        self.bookmaker_key = bookmaker_key
-        self.over = over
-        self.under = under
-        self.update_time = datetime.strptime(update_time, '%Y-%m-%d %H:%M:%S')
+from src.repository.surebet_repository import SurebetRepository
 
 
 def obter_pontos(dataframe):
@@ -101,12 +92,14 @@ def gerar_dataframe(result: List[Game]):
 
 
 def obter_surebets(df_surebet: pd.DataFrame):
+    arbitrages = []
     itens = [row for row in df_surebet.itertuples()]
-    surebet_count = 0
+
+    GAME_COLUMN = 1
+    BOOKMAKER_COLUMN = 2
     UNDER_COLUMN = 3
     OVER_COLUMN = 4
     for item in combinacao_itens_valida(itens):
-        # print(item[0].BOOKMAKER, item[1].BOOKMAKER)
         odds_UNDER_A = item[0][UNDER_COLUMN][1]
         odds_OVER_A = item[0][OVER_COLUMN][1]
 
@@ -115,48 +108,68 @@ def obter_surebets(df_surebet: pd.DataFrame):
 
         arbitrage_1 = ((1 / odds_OVER_A) + (1 / odds_UNDER_B)) * 100
         arbitrage_2 = ((1 / odds_OVER_B) + (1 / odds_UNDER_A)) * 100
+        game_id = item[0][GAME_COLUMN]
         if arbitrage_1 < 100:
-            surebet_count += 1
+            print(item)
+            outcome_id_over = item[0][OVER_COLUMN][0]
+            outcome_id_under = item[1][UNDER_COLUMN][0]
+            bookmaker_over = item[0][BOOKMAKER_COLUMN]
+            bookmaker_under = item[1][BOOKMAKER_COLUMN]
+            profit = 100- arbitrage_1
+            surebet = Surebet(game_id, outcome_id_over, outcome_id_under, bookmaker_over, bookmaker_under, odds_OVER_A,
+                              odds_UNDER_B, profit)
+
+            arbitrages.append(surebet)
             print(f'{round(arbitrage_1, 2)}% --> {item[0][OVER_COLUMN][0]} + {item[1][UNDER_COLUMN][0]}')
 
         if arbitrage_2 < 100:
-            surebet_count += 1
+            print(item)
+            outcome_id_over = item[1][OVER_COLUMN][0]
+            outcome_id_under = item[0][UNDER_COLUMN][0]
+            bookmaker_over = item[1][BOOKMAKER_COLUMN]
+            bookmaker_under = item[0][BOOKMAKER_COLUMN]
+            profit = 100- arbitrage_2
+            surebet = Surebet(game_id, outcome_id_over, outcome_id_under, bookmaker_over, bookmaker_under, odds_OVER_B,
+                              odds_UNDER_A, profit)
+            arbitrages.append(surebet)
             print(f'{round(arbitrage_2, 2)}% --> {item[1][OVER_COLUMN][0]} + {item[0][UNDER_COLUMN][0]}')
-    if surebet_count > 0:
-        print("-------------------------------------------------------------------------------------------------------")
 
+    return arbitrages
 
 
 if __name__ == '__main__':
     outcome_repository = OutcomeRepository()
+    surebet_repository = SurebetRepository()
     points = outcome_repository.find_all_points()
-
     game_repository = GameRepository()
-    games = game_repository.find_paged(1, 50)
-    df = gerar_dataframe(games)
-    games_id = [i.id for i in games]
-    print(games_id)
 
-    for id in games_id:
-        # Itera por todos os mercados pegando um de cada vez
-        pontos = obter_pontos(df.loc[df['GAME'] == id])
-        for ponto in pontos:
-            UNDER = f'totals_UNDER_{ponto}'
-            OVER = f'totals_OVER_{ponto}'
-            colunas = ['GAME', 'BOOKMAKER', UNDER, OVER, 'update_time']
-            novo_df = df.loc[df['GAME'] == id][colunas].copy()
-            colunas_drop = novo_df.columns[novo_df.eq('0').all() == True]
-            novo_df.drop(colunas_drop, axis='columns', inplace=True)
-            if len(novo_df.columns) == len(colunas):
-                novo_df = novo_df.loc[(novo_df[UNDER] != 0) & (novo_df[OVER] != 0)]
-                bookmakers = set(novo_df['BOOKMAKER'].to_list())
-                if len(bookmakers) > 1:
-                    obter_surebets(novo_df)
+    page_number = 1
+    while True:
+        print(page_number)
+        games, restante = game_repository.find_paged(page_number, 50)
+        if restante < 1:
+            break
+        page_number += 1
+        df = gerar_dataframe(games)
+        games_id = [i.id for i in games]
 
+        surebet_list = []
+        for id in games_id:
+            # Itera por todos os mercados pegando um de cada vez
+            pontos = obter_pontos(df.loc[df['GAME'] == id])
+            for ponto in pontos:
+                UNDER = f'totals_UNDER_{ponto}'
+                OVER = f'totals_OVER_{ponto}'
+                colunas = ['GAME', 'BOOKMAKER', UNDER, OVER, 'update_time']
+                novo_df = df.loc[df['GAME'] == id][colunas].copy()
+                colunas_drop = novo_df.columns[novo_df.eq('0').all() == True]
+                novo_df.drop(colunas_drop, axis='columns', inplace=True)
+                if len(novo_df.columns) == len(colunas):
+                    novo_df = novo_df.loc[(novo_df[UNDER] != 0) & (novo_df[OVER] != 0)]
+                    bookmakers = set(novo_df['BOOKMAKER'].to_list())
+                    if len(bookmakers) > 1:
+                        surebet_list.extend(obter_surebets(novo_df))
 
-# TODO para cada jogo criar uma view para facilitar o calculo, pegar a última atualização de cada jogo em cada bookmaker
-# TODO para cada jogo comparar com os n-1(bookmakers-mercado) outros e verificar se possui a condição de surebet
-# TODO criar uma tabela de resultados com as colunas (game_id, bookmaker_id_A, mercado_A, bookmaker_id_B, mercado_B, Lucro, %)
-# TODO (game_id, outcome_A_under,outcome_B_over,  Lucro, %)
-# TODO (game_id, outcome_A_over, outcome_B_under Lucro, %)
+        surebet_repository.save_all(surebet_list)
+
 

@@ -34,7 +34,7 @@ class Outcome(Base):
         return hash((self.update_time.replace(tzinfo=datetime.timezone.utc), self.name, self.point, self.price))
 
     def __repr__(self):
-        return f"name={self.name}, price={self.price}, point={self.point}"
+        return f"name={self.name}, price={self.price}, point={self.point}, update_time={self.update_time}"
 
 
 @dataclass
@@ -118,6 +118,9 @@ class Game(Base):
         del game_dict['bookmakers']
         return cls(**game_dict, bookmakers=bookmakers)
 
+    def __repr__(self):
+        return f"id={self.id}, commence_time={self.commence_time}, bookmakers={self.bookmakers}"
+
     def __eq__(self, other):
         return self.sport_key == other.sport_key \
             and self.commence_time == other.commence_time \
@@ -152,3 +155,28 @@ class Event(Base):
 
     def __repr__(self):
         return f"event_id={self.event_id}, sport_key={self.sport_key}, commence_time={self.commence_time}, home_team={self.home_team}, away_team={self.away_team}"
+
+
+@dataclass
+class Surebet(Base):
+    __tablename__ = "SUREBET"
+    game_id = Column("game_id", String, ForeignKey('GAME.id'), primary_key=True)
+    outcome_id_OVER = Column("outcome_id_OVER", Integer, ForeignKey('OUTCOME.id'), primary_key=True)
+    outcome_id_UNDER = Column("outcome_id_UNDER", Integer, ForeignKey('OUTCOME.id'), primary_key=True)
+    bookmaker_key_OVER = Column("bookmaker_key_OVER", String)
+    bookmaker_key_UNDER = Column("bookmaker_key_UNDER", String)
+    odd_OVER = Column("odd_OVER", Float)
+    odd_UNDER = Column("odd_UNDER", Float)
+    profit = Column("profit", Float)
+
+    def __init__(self, game_id, outcome_id_OVER, outcome_id_UNDER, bookmaker_key_OVER,
+                 bookmaker_key_UNDER, odd_OVER, odd_UNDER, profit):
+        self.game_id = game_id
+        self.outcome_id_OVER = outcome_id_OVER
+        self.outcome_id_UNDER = outcome_id_UNDER
+        self.bookmaker_key_OVER = bookmaker_key_OVER
+        self.bookmaker_key_UNDER = bookmaker_key_UNDER
+        self.odd_OVER = odd_OVER
+        self.odd_UNDER = odd_UNDER
+        self.profit = profit
+
