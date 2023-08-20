@@ -36,10 +36,11 @@ if __name__ == '__main__':
         odds_response = requests.get(url=URL_ODDS, params=params)
         os.system(f"echo status: '{odds_response.status_code}' >> fetch_single_game.txt")
         if odds_response.status_code == 401 or int(odds_response.headers['X-Requests-Remaining']) < 30:
+            os.system(f"echo entrou if: API[1]'{params['apiKey']}' >> fetch_single_game.txt")
             replace_api_key(params['apiKey'])
             time.sleep(1.5)
             params['apiKey'] = API_KEY.split(',')[1]
-            os.system(f"echo entrou if: API[1]'{API_KEY.split(',')[1]}' >> fetch_single_game.txt")
+            os.system(f"echo entrou if: API[1]'{params['apiKey']}' >> fetch_single_game.txt")
 
     log = f"[API_KEY]: {params['apiKey']} \n[Requests-Used]: {odds_response.headers['X-Requests-Used']} \n[Requests-Remaining]: {odds_response.headers['X-Requests-Remaining']} \n[Date]: {odds_response.headers['Date']}"
     with open('log/log_jogos', 'w') as f:
