@@ -123,10 +123,10 @@ class GameService:
             while response.status_code != 200:
                 URL = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
                 response = requests.get(url=URL, params=params)
-                if response.status_code != 200 and int(response.headers['X-Requests-Remaining']) < 30:
+                if response.status_code == 401 or int(response.headers['X-Requests-Remaining']) < 30:
                     time.sleep(1.5)
                     replace_api_key(params['apiKey'])
-                    params['apiKey'] = API_KEY.split(',')[0]
+                    params['apiKey'] = API_KEY.split(',')[1]
                     continue
                 games.extend(response.json())
                 response_list.append(response.json())

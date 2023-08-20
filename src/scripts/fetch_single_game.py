@@ -33,10 +33,10 @@ if __name__ == '__main__':
     odds_response.status_code = 1
     while odds_response.status_code != 200:
         odds_response = requests.get(url=URL_ODDS, params=params)
-        if odds_response.status_code != 200 and int(odds_response.headers['X-Requests-Remaining']) < 30:
+        if odds_response.status_code == 401 or int(odds_response.headers['X-Requests-Remaining']) < 30:
             replace_api_key(params['apiKey'])
             time.sleep(1.5)
-            params['apiKey'] = API_KEY.split(',')[0]
+            params['apiKey'] = API_KEY.split(',')[1]
 
     log = f"[API_KEY]: {API_KEY.split(',')[0]} \n[Requests-Used]: {odds_response.headers['X-Requests-Used']} \n[Requests-Remaining]: {odds_response.headers['X-Requests-Remaining']} \n[Date]: {odds_response.headers['Date']}"
     with open('log/log_jogos', 'w') as f:
