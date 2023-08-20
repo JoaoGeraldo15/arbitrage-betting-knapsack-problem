@@ -38,7 +38,7 @@ if __name__ == '__main__':
             time.sleep(1.5)
             params['apiKey'] = API_KEY.split(',')[0]
 
-    log = f"[Requests-Used]: {odds_response.headers['X-Requests-Used']} \n[Requests-Remaining]: {odds_response.headers['X-Requests-Remaining']} \n[Date]: {odds_response.headers['Date']}"
+    log = f"[API_KEY]: {API_KEY.split(',')[0]} \n[Requests-Used]: {odds_response.headers['X-Requests-Used']} \n[Requests-Remaining]: {odds_response.headers['X-Requests-Remaining']} \n[Date]: {odds_response.headers['Date']}"
     with open('log/log_jogos', 'w') as f:
         f.write(log)
 
