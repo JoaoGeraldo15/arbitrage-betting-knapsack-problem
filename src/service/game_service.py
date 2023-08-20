@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import uuid
 from contextlib import contextmanager
@@ -8,6 +9,7 @@ from typing import List
 import pytz
 import requests
 from injectable import autowired, Autowired
+from requests import Response
 
 from src.config.config import API_KEY
 from src.model.models import Game, Bookmaker, Market, Outcome
@@ -15,6 +17,9 @@ from src.repository.game_repository import GameRepository
 from src.schema.schema import GameBase
 from src.service.at_task_service import AtTaskService
 from src.config.config import SCRIPTS_PATH
+from src.util import replace_api_key
+import glob
+
 
 class GameService:
     @autowired
@@ -103,22 +108,30 @@ class GameService:
 
     def fetch_games(self, leagues: List[str]):
         params = {
-            'apiKey': API_KEY,
+            'apiKey': API_KEY.split(',')[0],
             'region': 'eu',
             'markets': 'totals,h2h',
             'bookmakers': 'betfair,betsson,matchbook,pinnacle,williamhill,sport888,onexbet,betonlineag,unibet_eu,nordicbet'
         }
 
         response_list = []
-        response = None
+        response = Response()
+        response.status_code = 1
         games = []
 
         for league in leagues:
-            URL = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
-            response = requests.get(url=URL, params=params)
-            games.extend(response.json())
-            response_list.append(response.json())
-            time.sleep(1.5)
+            while response.status_code != 200:
+                URL = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
+                response = requests.get(url=URL, params=params)
+                if response.status_code != 200 and int(response.headers['X-Requests-Remaining']) < 30:
+                    time.sleep(1.5)
+                    replace_api_key(params['apiKey'])
+                    params['apiKey'] = API_KEY.split(',')[0]
+                    continue
+                games.extend(response.json())
+                response_list.append(response.json())
+                time.sleep(1.5)
+            response.status_code = 1
 
         log = f"[Requests-Used]: {response.headers['X-Requests-Used']} \n[Requests-Remaining]: {response.headers['X-Requests-Remaining']} \n[Date]: {response.headers['Date']}"
         with open('log/log_jogos', 'w') as f:
@@ -132,14 +145,16 @@ class GameService:
 
         try:
             self.save_games(games)
-        except:
-            pass
+        except Exception as e:
+            os.system(f"echo '{e}' >> error_save_games.txt")
 
         games_to_schedule = [g for g in games if g.commence_time.date() == datetime.now(timezone.utc).date()]
         path = f'{SCRIPTS_PATH}/fetch_single_game.py'
         sp_zone = pytz.timezone('America/Sao_Paulo')
         for g in games_to_schedule:
-            schedule_time_1 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=60)).strftime("%H:%M %Y-%m-%d")
-            schedule_time_2 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=30)).strftime("%H:%M %Y-%m-%d")
+            schedule_time_1 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=150)).strftime("%H:%M %Y-%m-%d")
+            schedule_time_2 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=60)).strftime("%H:%M %Y-%m-%d")
+            schedule_time_3 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=30)).strftime("%H:%M %Y-%m-%d")
             self.at.do(path, g.id, g.sport_key, schedule_time_1)
             self.at.do(path, g.id, g.sport_key, schedule_time_2)
+            self.at.do(path, g.id, g.sport_key, schedule_time_3)
