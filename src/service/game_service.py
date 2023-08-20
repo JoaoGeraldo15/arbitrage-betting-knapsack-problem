@@ -133,7 +133,7 @@ class GameService:
                 time.sleep(1.5)
             response.status_code = 1
 
-        log = f"[API_KEY]: {API_KEY.split(',')[0]} \n[Requests-Used]: {response.headers['X-Requests-Used']} \n[Requests-Remaining]: {response.headers['X-Requests-Remaining']} \n[Date]: {response.headers['Date']}"
+        log = f"[API_KEY]: {params['apiKey']} \n[Requests-Used]: {response.headers['X-Requests-Used']} \n[Requests-Remaining]: {response.headers['X-Requests-Remaining']} \n[Date]: {response.headers['Date']}"
         with open('log/log_jogos', 'w') as f:
             f.write(log)
 
