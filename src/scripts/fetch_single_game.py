@@ -29,35 +29,29 @@ if __name__ == '__main__':
     }
 
     URL_ODDS = f'https://api.the-odds-api.com/v4/sports/{sport}/events/{game_id}/odds'
-    os.system(f"echo sport: '{sport}' params: {params['apiKey']} >> fetch_single_game.txt")
-    os.system(f"echo len(API_KEY.split(',')): '{len(API_KEY.split(','))}' >> fetch_single_game.txt")
+    amount_api_key = len(API_KEY.split(','))
+    os.system(f"echo sport: '{sport}' params: {params['apiKey']} amount_api_key: '{amount_api_key}' >> fetch_single_game.txt")
     odds_response = Response()
     odds_response.status_code = 1
-    while odds_response.status_code != 200:
+    index_api_key = 1
+    while odds_response.status_code != 200 and index_api_key != amount_api_key:
         odds_response = requests.get(url=URL_ODDS, params=params)
         os.system(f"echo status: '{odds_response.status_code}' >> fetch_single_game.txt")
         if odds_response.status_code == 401 or int(odds_response.headers['X-Requests-Remaining']) < 30:
-            # replace_api_key(params['apiKey'])
             time.sleep(1.5)
-            params['apiKey'] = API_KEY.split(',')[1]
-            os.system(f"echo entrou if: API[1]'{params['apiKey']}' >> fetch_single_game.txt")
-            os.system(f"echo API_KEY.split(','): '{API_KEY.split(',')} \nAPI_KEY.split(',')[0]: {API_KEY.split(',')[0]} \nAPI_KEY.split(',')[1]: {API_KEY.split(',')[1]}'' >> fetch_single_game.txt")
+            params['apiKey'] = API_KEY.split(',')[index_api_key]
+            os.system(f"echo entrou if: API['{index_api_key}']: '{params['apiKey']}' >> fetch_single_game.txt")
+            index_api_key += 1
 
     log = f"[API_KEY]: {params['apiKey']} \n[Requests-Used]: {odds_response.headers['X-Requests-Used']} \n[Requests-Remaining]: {odds_response.headers['X-Requests-Remaining']} \n[Date]: {odds_response.headers['Date']}"
     with open('log/log_jogos', 'w') as f:
         f.write(log)
 
-    file_name = f"{date.today().strftime('%d_%m_%Y')}_[{datetime.now().strftime('%H:%M:%S')}]_{str(uuid.uuid4())}.json"
-    with open(f"src/data/single_game/{file_name}", "w") as f:
-        json.dump(odds_response.json(), f)
+    if odds_response.status_code == 200:
+        file_name = f"{date.today().strftime('%d_%m_%Y')}_[{datetime.now().strftime('%H:%M:%S')}]_{str(uuid.uuid4())}.json"
+        with open(f"src/data/single_game/{file_name}", "w") as f:
+            json.dump(odds_response.json(), f)
 
-    service = GameService()
-    game = GameBase(**odds_response.json())
-    service.save_games([game])
-
-
-
-
-
-
-
+        service = GameService()
+        game = GameBase(**odds_response.json())
+        service.save_games([game])
