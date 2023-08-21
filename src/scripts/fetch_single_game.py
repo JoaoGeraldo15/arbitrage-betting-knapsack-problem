@@ -39,9 +39,9 @@ if __name__ == '__main__':
         os.system(f"echo status: '{odds_response.status_code}' >> fetch_single_game.txt")
         if odds_response.status_code == 401 or int(odds_response.headers['X-Requests-Remaining']) < 30:
             time.sleep(1.5)
+            index_api_key += 1
             params['apiKey'] = API_KEY.split(',')[index_api_key]
             os.system(f"echo entrou if: API['{index_api_key}']: '{params['apiKey']}' >> fetch_single_game.txt")
-            index_api_key += 1
 
     log = f"[API_KEY]: {params['apiKey']} \n[Requests-Used]: {odds_response.headers['X-Requests-Used']} \n[Requests-Remaining]: {odds_response.headers['X-Requests-Remaining']} \n[Date]: {odds_response.headers['Date']}"
     with open('log/log_jogos', 'w') as f:

@@ -127,8 +127,8 @@ class GameService:
                 if response.status_code == 401 or int(response.headers['X-Requests-Remaining']) < 30:
                     time.sleep(1.5)
                     # replace_api_key(params['apiKey'])
-                    params['apiKey'] = API_KEY.split(',')[index_api_key]
                     index_api_key += 1
+                    params['apiKey'] = API_KEY.split(',')[index_api_key]
                     continue
                 games.extend(response.json())
                 response_list.append(response.json())
