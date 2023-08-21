@@ -44,7 +44,7 @@ if __name__ == '__main__':
     os.system(f"echo sport: '{sport}' params: {params['apiKey']} amount_api_key: '{amount_api_key}' >> fetch_single_game.txt")
     odds_response = Response()
     odds_response.status_code = 1
-    index_api_key = LAST_API_KEY_USED
+    index_api_key = int(LAST_API_KEY_USED)
     os.system(f"echo index_api_key before loop: '{index_api_key}' >> fetch_single_game.txt")
     while odds_response.status_code != 200 and index_api_key != amount_api_key:
         odds_response = requests.get(url=URL_ODDS, params=params)

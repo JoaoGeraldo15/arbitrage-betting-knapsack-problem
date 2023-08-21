@@ -119,7 +119,7 @@ class GameService:
         response.status_code = 1
         games = []
         amount_api_key = len(API_KEY.split(','))
-        index_api_key = LAST_API_KEY_USED
+        index_api_key = int(LAST_API_KEY_USED)
         for league in leagues:
             while response.status_code != 200 and index_api_key != amount_api_key:
                 URL = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
