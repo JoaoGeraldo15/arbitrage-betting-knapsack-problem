@@ -11,7 +11,7 @@ import requests
 from injectable import autowired, Autowired
 from requests import Response
 
-from src.config.config import API_KEY
+from src.config.config import API_KEY, LAST_API_KEY_USED
 from src.model.models import Game, Bookmaker, Market, Outcome
 from src.repository.game_repository import GameRepository
 from src.schema.schema import GameBase
@@ -119,14 +119,13 @@ class GameService:
         response.status_code = 1
         games = []
         amount_api_key = len(API_KEY.split(','))
-        index_api_key = 1
+        index_api_key = LAST_API_KEY_USED
         for league in leagues:
             while response.status_code != 200 and index_api_key != amount_api_key:
                 URL = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
                 response = requests.get(url=URL, params=params)
                 if response.status_code == 401 or int(response.headers['X-Requests-Remaining']) < 30:
                     time.sleep(1.5)
-                    # replace_api_key(params['apiKey'])
                     index_api_key += 1
                     params['apiKey'] = API_KEY.split(',')[index_api_key]
                     continue
@@ -134,6 +133,8 @@ class GameService:
                 response_list.append(response.json())
                 time.sleep(1.5)
             response.status_code = 1
+
+        self.atualizarApiKeyUsada(index_api_key)
 
         log = f"[API_KEY]: {params['apiKey']} \n[Requests-Used]: {response.headers['X-Requests-Used']} \n[Requests-Remaining]: {response.headers['X-Requests-Remaining']} \n[Date]: {response.headers['Date']}"
         with open('log/log_jogos', 'w') as f:
@@ -164,3 +165,12 @@ class GameService:
             self.at.do(path, g.id, g.sport_key, schedule_time_3)
             self.at.do(path, g.id, g.sport_key, schedule_time_4)
             self.at.do(path, g.id, g.sport_key, schedule_time_5)
+
+    def atualizarApiKeyUsada(self, index_api_key):
+        with open("../../.env", "r") as file:
+            lines = file.readlines()
+        with open("../../.env", "w") as file:
+            for line in lines:
+                if line.startswith("LAST_API_KEY_USED="):
+                    line = f"LAST_API_KEY_USED={index_api_key}\n"
+                file.write(line)
