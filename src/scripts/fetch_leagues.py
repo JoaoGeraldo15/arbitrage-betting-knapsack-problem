@@ -1,15 +1,15 @@
+import os
 import sys
 
 from requests import Response
 
 sys.path.append('/home/joaogeraldo/TCC/fetch-api')
 from src.service.game_service import GameService
-from src.util import checkout_root_path
 import requests
 from src.config.config import API_KEY, LAST_API_KEY_USED
 
 if __name__ == '__main__':
-    checkout_root_path()
+    os.chdir('/root/arbitrage-betting-knapsack-problem')
     response = Response()
     response.status_code = 1
     amount_api_key = len(API_KEY.split(','))

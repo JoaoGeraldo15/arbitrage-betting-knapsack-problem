@@ -18,9 +18,9 @@ from src.util import checkout_root_path, replace_api_key
 
 
 def atualizarApiKeyUsada(index_api_key):
-    with open("../../.env", "r") as file:
+    with open(".env", "r") as file:
         lines = file.readlines()
-    with open("../../.env", "w") as file:
+    with open(".env", "w") as file:
         for line in lines:
             if line.startswith("LAST_API_KEY_USED="):
                 line = f"LAST_API_KEY_USED={index_api_key}\n"

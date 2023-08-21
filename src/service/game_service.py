@@ -167,9 +167,9 @@ class GameService:
             self.at.do(path, g.id, g.sport_key, schedule_time_5)
 
     def atualizarApiKeyUsada(self, index_api_key):
-        with open("../../.env", "r") as file:
+        with open(".env", "r") as file:
             lines = file.readlines()
-        with open("../../.env", "w") as file:
+        with open(".env", "w") as file:
             for line in lines:
                 if line.startswith("LAST_API_KEY_USED="):
                     line = f"LAST_API_KEY_USED={index_api_key}\n"
