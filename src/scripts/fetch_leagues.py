@@ -3,7 +3,7 @@ import sys
 
 from requests import Response
 
-sys.path.append('/home/joaogeraldo/TCC/fetch-api')
+sys.path.append('/root/arbitrage-betting-knapsack-problem')
 from src.service.game_service import GameService
 import requests
 from src.config.config import API_KEY, LAST_API_KEY_USED
