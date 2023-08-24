@@ -12,7 +12,7 @@ if __name__ == '__main__':
     os.chdir('/root/arbitrage-betting-knapsack-problem')
     response = Response()
     response.status_code = 1
-    amount_api_key = len(API_KEY.split(','))
+    amount_api_key = len(str(API_KEY).split(','))
     index_api_key = int(LAST_API_KEY_USED)
     while response.status_code != 200 and index_api_key != amount_api_key:
         key = f"{API_KEY.split(',')[index_api_key]}"
