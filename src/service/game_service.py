@@ -48,6 +48,14 @@ class GameService:
         except:
             return None
 
+    def save_game_first(self, games: List[GameBase]):
+        games_only = list()
+        for game in games:
+            game.bookmakers = list()
+            games_only.append(Game.from_schema(game))
+
+        self.repository.save_all(games_only)
+
     @contextmanager
     def save_games(self, games: List[GameBase]):
         # Pega os ids dos jogos
@@ -120,6 +128,7 @@ class GameService:
         games = []
         amount_api_key = len(API_KEY.split(','))
         index_api_key = int(LAST_API_KEY_USED)
+        os.system(f"echo index_api_key: '{index_api_key}' amount_api_key: '{amount_api_key}' >> ../fetch_leagues.txt")
         for league in leagues:
             while response.status_code != 200 and index_api_key != amount_api_key:
                 URL = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
@@ -134,7 +143,9 @@ class GameService:
                 time.sleep(1.5)
             response.status_code = 1
 
+        os.system(f"echo antes' >> ../fetch_leagues.txt")
         self.atualizarApiKeyUsada(index_api_key)
+        os.system(f"echo depois' >> ../fetch_leagues.txt")
 
         log = f"[API_KEY]: {params['apiKey']} \n[Requests-Used]: {response.headers['X-Requests-Used']} \n[Requests-Remaining]: {response.headers['X-Requests-Remaining']} \n[Date]: {response.headers['Date']}"
         with open('log/log_jogos', 'w') as f:
@@ -174,3 +185,5 @@ class GameService:
                 if line.startswith("LAST_API_KEY_USED="):
                     line = f"LAST_API_KEY_USED={index_api_key}\n"
                 file.write(line)
+
+
