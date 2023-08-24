@@ -143,9 +143,9 @@ class GameService:
                 time.sleep(1.5)
             response.status_code = 1
 
-        os.system(f"echo antes' >> ../fetch_leagues.txt")
+        os.system(f"echo 'antes' >> ../fetch_leagues.txt")
         self.atualizarApiKeyUsada(index_api_key)
-        os.system(f"echo depois' >> ../fetch_leagues.txt")
+        os.system(f"echo 'depois' >> ../fetch_leagues.txt")
 
         log = f"[API_KEY]: {params['apiKey']} \n[Requests-Used]: {response.headers['X-Requests-Used']} \n[Requests-Remaining]: {response.headers['X-Requests-Remaining']} \n[Date]: {response.headers['Date']}"
         with open('log/log_jogos', 'w') as f:
