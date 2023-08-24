@@ -140,6 +140,7 @@ class GameService:
                     continue
                 games.extend(response.json())
                 response_list.append(response.json())
+                os.system(f"echo status: '{response.status_code}' lista: '{response_list}' >> ../fetch_leagues.txt")
                 time.sleep(1.5)
             response.status_code = 1
 
