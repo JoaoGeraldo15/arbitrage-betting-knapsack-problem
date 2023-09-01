@@ -167,6 +167,8 @@ class Surebet(Base):
     bookmaker_key_UNDER = Column("bookmaker_key_UNDER", String)
     odd_OVER = Column("odd_OVER", Float)
     odd_UNDER = Column("odd_UNDER", Float)
+    last_update_OVER = Column("last_update_OVER", DateTime(timezone=False))
+    last_update_UNDER = Column("last_update_UNDER", DateTime(timezone=False))
     profit = Column("profit", Float)
 
     def __init__(self, game_id, outcome_id_OVER, outcome_id_UNDER, bookmaker_key_OVER,

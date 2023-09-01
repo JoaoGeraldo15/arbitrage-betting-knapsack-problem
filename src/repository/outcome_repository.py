@@ -18,3 +18,6 @@ class OutcomeRepository:
             return db.session.query(Outcome).filter(
                 Outcome.point == point).all()
 
+    def find_all_by_ids(self, ids: List[int]) -> List[Outcome]:
+        with DBConnection() as db:
+            return db.session.query(Outcome).filter(Outcome.id.in_(ids)).all()

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 from typing import List
 
 import pandas as pd
@@ -91,8 +92,8 @@ def gerar_dataframe(result: List[Game]):
     return pd.DataFrame.from_records(registros, columns=colunas).fillna(0)
 
 
-def obter_surebets(df_surebet: pd.DataFrame):
-    arbitrages = []
+def obter_surebets(df_surebet: pd.DataFrame) -> List[Surebet]:
+    arbitrages: List[Surebet] = []
     itens = [row for row in df_surebet.itertuples()]
 
     GAME_COLUMN = 1
@@ -115,7 +116,7 @@ def obter_surebets(df_surebet: pd.DataFrame):
             outcome_id_under = item[1][UNDER_COLUMN][0]
             bookmaker_over = item[0][BOOKMAKER_COLUMN]
             bookmaker_under = item[1][BOOKMAKER_COLUMN]
-            profit = 100- arbitrage_1
+            profit = 100 - arbitrage_1
             surebet = Surebet(game_id, outcome_id_over, outcome_id_under, bookmaker_over, bookmaker_under, odds_OVER_A,
                               odds_UNDER_B, profit)
 
@@ -135,6 +136,20 @@ def obter_surebets(df_surebet: pd.DataFrame):
             print(f'{round(arbitrage_2, 2)}% --> {item[1][OVER_COLUMN][0]} + {item[0][UNDER_COLUMN][0]}')
 
     return arbitrages
+
+
+def obter_data_outcome(outcome_id, outcomes: List[Outcome]) -> datetime:
+    return [o.update_time for o in outcomes if o.id == outcome_id][0]
+
+
+def setar_hora_surebet(arbitrages: List[Surebet], outcome_repository: OutcomeRepository):
+    ids_outcomes = [a.outcome_id_OVER for a in arbitrages]
+    ids_outcomes.extend([a.outcome_id_UNDER for a in arbitrages])
+    ids_outcomes = set(ids_outcomes)
+    outcomes = outcome_repository.find_all_by_ids(list(ids_outcomes))
+    for arbitrage in arbitrages:
+        arbitrage.last_update_OVER = obter_data_outcome(arbitrage.outcome_id_OVER, outcomes)
+        arbitrage.last_update_UNDER = obter_data_outcome(arbitrage.outcome_id_UNDER, outcomes)
 
 
 if __name__ == '__main__':
@@ -170,6 +185,5 @@ if __name__ == '__main__':
                     if len(bookmakers) > 1:
                         surebet_list.extend(obter_surebets(novo_df))
 
+        setar_hora_surebet(surebet_list, outcome_repository)
         surebet_repository.save_all(surebet_list)
-
-
