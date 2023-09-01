@@ -166,17 +166,13 @@ class GameService:
         games_to_schedule = [g for g in games if g.commence_time.date() == datetime.now(timezone.utc).date()]
         path = f'{SCRIPTS_PATH}/fetch_single_game.py'
         sp_zone = pytz.timezone('America/Sao_Paulo')
+        time_list = [3, 10, 15, 20, 25, 30, 45, 60, 75, 90]
         for g in games_to_schedule:
-            schedule_time_1 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=150)).strftime("%H:%M %Y-%m-%d")
-            schedule_time_2 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=60)).strftime("%H:%M %Y-%m-%d")
-            schedule_time_3 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=30)).strftime("%H:%M %Y-%m-%d")
-            schedule_time_4 = (g.commence_time.astimezone(sp_zone) + timedelta(minutes=30)).strftime("%H:%M %Y-%m-%d")
-            schedule_time_5 = (g.commence_time.astimezone(sp_zone) + timedelta(minutes=60)).strftime("%H:%M %Y-%m-%d")
-            self.at.do(path, g.id, g.sport_key, schedule_time_1)
-            self.at.do(path, g.id, g.sport_key, schedule_time_2)
-            self.at.do(path, g.id, g.sport_key, schedule_time_3)
-            self.at.do(path, g.id, g.sport_key, schedule_time_4)
-            self.at.do(path, g.id, g.sport_key, schedule_time_5)
+            for t in time_list:
+                schedule_time_1 = (g.commence_time.astimezone(sp_zone) - timedelta(minutes=t)).strftime("%H:%M %Y-%m-%d")
+                schedule_time_2 = (g.commence_time.astimezone(sp_zone) + timedelta(minutes=t)).strftime("%H:%M %Y-%m-%d")
+                self.at.do(path, g.id, g.sport_key, schedule_time_1)
+                self.at.do(path, g.id, g.sport_key, schedule_time_2)
 
     def atualizarApiKeyUsada(self, index_api_key):
         with open(".env", "r") as file:

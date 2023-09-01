@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     URL_ODDS = f'https://api.the-odds-api.com/v4/sports/{sport}/events/{game_id}/odds'
     amount_api_key = len(API_KEY.split(','))
-    os.system(f"echo sport: '{sport}' params: {params['apiKey']} amount_api_key: '{amount_api_key}' >> fetch_single_game.txt")
+    # os.system(f"echo sport: '{sport}' params: {params['apiKey']} amount_api_key: '{amount_api_key}' >> fetch_single_game.txt")
     odds_response = Response()
     odds_response.status_code = 1
     index_api_key = int(LAST_API_KEY_USED)
@@ -60,6 +60,7 @@ if __name__ == '__main__':
     with open('log/log_jogos', 'w') as f:
         f.write(log)
 
+    os.system(f"echo odds_response.status_code: '{odds_response.status_code}' >> fetch_single_game.txt")
     if odds_response.status_code == 200:
         file_name = f"{date.today().strftime('%d_%m_%Y')}_[{datetime.now().strftime('%H:%M:%S')}]_{str(uuid.uuid4())}.json"
         with open(f"src/data/single_game/{file_name}", "w") as f:

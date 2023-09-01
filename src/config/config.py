@@ -8,6 +8,7 @@ Base = declarative_base()
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
+LAST_API_KEY_USED = os.getenv("LAST_API_KEY_USED")
 DATABASE_URL = os.getenv("DATABASE_URL")
 PROJECT_PATH = os.getenv("PROJECT_PATH")
 SRC_PATH = os.getenv("SRC_PATH")
