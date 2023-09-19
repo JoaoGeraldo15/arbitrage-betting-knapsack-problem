@@ -182,3 +182,14 @@ class Surebet(Base):
         self.odd_UNDER = odd_UNDER
         self.profit = profit
 
+    def __repr__(self):
+        return f"Surebet(game_id={self.game_id}, outcome_id_OVER={self.outcome_id_OVER}, outcome_id_UNDER={self.outcome_id_UNDER}, bookmaker_key_OVER='{self.bookmaker_key_OVER}', bookmaker_key_UNDER='{self.bookmaker_key_UNDER}', odd_OVER={self.odd_OVER}, odd_UNDER={self.odd_UNDER}, profit={self.profit})"
+
+    def __eq__(self, other):
+        return self.game_id == other.game_id \
+            and self.bookmaker_key_OVER == other.bookmaker_key_OVER \
+            and self.bookmaker_key_UNDER == other.bookmaker_key_UNDER
+
+    def __hash__(self):
+        return hash((self.game_id, self.bookmaker_key_OVER, self.bookmaker_key_UNDER))
+

@@ -8,3 +8,4 @@ injectable~=3.4.7
 cprofilev
 python-dotenv~=1.0.0
 pandas~=1.5.3
+matplotlib
