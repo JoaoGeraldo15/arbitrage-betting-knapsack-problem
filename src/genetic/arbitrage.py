@@ -1,3 +1,4 @@
+import math
 from random import random
 
 
@@ -34,11 +35,14 @@ class Individual:
         self.profits = [i.profit for i in arbitrages]
         self.budget = budget
         self.geracao = geracao
-        self.fitness = 0
+        self.fitness = []
+        self.fitness_max_profit = None
+        self.fitness_diversification = None
         self.chromosome = []
 
         total_profit = 0
         count_profit = 0
+
         for i in range(len(arbitrages)):
             valor = round(random(), 2)
             if valor < 0.5:
@@ -47,9 +51,9 @@ class Individual:
                 self.chromosome.append((1, valor))
                 total_profit += self.profits[i]
                 count_profit += 1
-        print(f"{self.chromosome} --> {[sum([chromosome[1] for chromosome in self.chromosome if chromosome[0] == 1])]}")
+
         self.normalize()
-        print(f"{self.chromosome} --> {[sum([chromosome[1] for chromosome in self.chromosome if chromosome[0] == 1])]}")
+        self.evaluate_fitness()
 
     def normalize(self):
         total = sum([chromosome[1] for chromosome in self.chromosome if chromosome[0] == 1])
@@ -59,13 +63,164 @@ class Individual:
             if chromosome[0] == 1:
                 new_value_normalized = round(chromosome[1]/total, 2)
                 self.chromosome[index] = (1, new_value_normalized)
-    def check_fitness(self):
+
+    def objective_function_max_profit(self):
+        fit = 0
         for index in range(len(self.chromosome)):
             gene = self.chromosome[index]
             if gene[0] == 1:
-                # print(f'self.profits[index]: {self.profits[index]} * (gene[1]: {gene[1]} * self.budget: {self.budget}) = {round(self.profits[index] * (gene[1] * self.budget), 2)} ')
-                self.fitness += round(self.profits[index] * (gene[1] * self.budget), 2)
-        print(f'Fitness: {self.fitness}')
+                fit += round(self.profits[index] * (gene[1] * self.budget), 2)
+        self.fitness_max_profit = fit
+        self.fitness.append(fit)
+
+    def objective_function_min_withdraw(self):
+        # função que será pensada no futuro
+        pass
+
+    def objective_function_diversification(self):
+        entropy = 0
+        for index in range(len(self.chromosome)):
+            gene = self.chromosome[index]
+            if gene[0] == 1:
+                entropy -= gene[1] * math.log2(gene[1])
+        self.fitness_diversification = entropy
+        self.fitness.append(entropy)
+
+    def evaluate_fitness(self):
+        self.objective_function_max_profit()
+        self.objective_function_diversification()
+
+
+class Population:
+    def __init__(self, num_individuals, arbitrages, budget):
+        """
+        Inicializa a população de soluções no contexto do algoritmo NSGA-II.
+
+        Args:
+            num_individuals (int): O número de indivíduos na população.
+            arbitrages (list): É uma lista de objetos Arbitrage representando as oportunidades de arbitragem.
+            budget (float): Orçamento disponível para alocação nas apostas.
+        """
+        self.num_individuals = num_individuals
+        self.solutions = []  # Lista de todas as soluções
+        self.pareto_fronts = []  # Lista de listas representando as frentes de Pareto
+
+        for _ in range(num_individuals):
+            individual = Individual(arbitrages, budget)
+            self.solutions.append(Solution(individual.fitness_max_profit, individual.fitness_diversification, [individual.fitness_max_profit, individual.fitness_diversification]))
+
+        self.initialize_pareto_fronts()
+        self.assign_rank()
+        self.calculate_crowding_distance()
+
+    def initialize_pareto_fronts(self):
+        """
+            Inicializa as frentes de Pareto da população e identifica as soluções não dominadas na primeira frente.
+
+       """
+        # Inicialize as estruturas para armazenar as frentes de Pareto
+        for solution in self.solutions:
+            solution.dominated_by = []
+            solution.dominated_by_count = 0
+
+        # Identifique as soluções não dominadas (frente de Pareto inicial)
+        pareto_front = []
+        for solution1 in self.solutions:
+            is_dominated = False
+            for solution2 in self.solutions:
+                if solution1 is not solution2:
+                    if (solution1.fitness_max_profit >= solution2.fitness_max_profit
+                            and solution1.fitness_diversification >= solution2.fitness_diversification):
+                        solution1.dominated_solutions.append(solution2)
+
+                    elif (solution2.fitness_max_profit >= solution1.fitness_max_profit
+                            and solution2.fitness_diversification >= solution1.fitness_diversification):
+                        solution1.dominated_by.append(solution2)
+                        solution1.dominated_by_count += 1
+                        is_dominated = True
+
+            if not is_dominated:
+                solution1.rank = 1
+                pareto_front.append(solution1)
+
+        self.pareto_fronts.append(pareto_front)
+
+    def assign_rank(self):
+        """
+            Atribui um rank a cada solução com base em sua dominância em relação às outras soluções.
+        """
+        rank = 1
+        current_front = self.pareto_fronts[0]
+
+        while current_front:
+            next_front = []
+
+            for solution in current_front:
+                solution.rank = rank
+                for dominated_solution in solution.dominated_solutions:
+                    dominated_solution.dominated_by_count -= 1
+                    if dominated_solution.dominated_by_count == 0:
+                        next_front.append(dominated_solution)
+
+            rank += 1
+            current_front = next_front
+
+    def calculate_crowding_distance(self):
+        for solution in self.solutions:
+            solution.crowding_distance = 0
+
+        num_objectives = len(self.solutions[0].fitness)
+
+        for obj_index in range(num_objectives):
+            sorted_solutions = sorted(self.solutions, key=lambda x: x.fitness[obj_index])
+            sorted_solutions[0].crowding_distance = float('inf')
+            sorted_solutions[-1].crowding_distance = float('inf')
+
+            min_fitness = sorted_solutions[0].fitness[obj_index]
+            max_fitness = sorted_solutions[-1].fitness[obj_index]
+
+            for i in range(1, len(sorted_solutions) - 1):  # Excluindo o primeiro e último que já são infinitos
+                sorted_solutions[i].crowding_distance += ((sorted_solutions[i + 1].fitness[obj_index] - sorted_solutions[i - 1].fitness[obj_index])
+                                                          / (max_fitness - min_fitness))
+
+    def select_survivors(self, num_individuals):
+        survivors = []
+
+        for front in self.pareto_fronts:
+            front.sort(key=lambda x: (-x.rank, x.crowding_distance))  # Ordene por rank decrescente e distância de lotação crescente
+            survivors.extend(front)
+
+            if len(survivors) >= num_individuals:
+                break
+
+        return survivors[:num_individuals]  # Retorna os melhores indivíduos para a próxima geração
+
+    def get_fitness_profit(self):
+        return [individual.fitness_max_profit for individual in self.solutions]
+
+    def get_fitness_diversification(self):
+        return [individual.fitness_diversification for individual in self.solutions]
+
+
+class Solution:
+    def __init__(self, fitness_max_profit, fitness_diversification, fitness):
+        """
+            Inicializa uma solução individual no contexto do algoritmo NSGA-II.
+
+        Args:
+            fitness_max_profit (float): O valor de fitness para a maximização do lucro máximo.
+            fitness_diversification (float): O valor de fitness para a diversificação.
+            fitness
+        """
+        self.fitness_max_profit = fitness_max_profit
+        self.fitness_diversification = fitness_diversification
+        self.fitness = fitness # lista com todas os fitness
+        self.dominated_by = []  # Lista de soluções que dominam esta solução
+        self.dominated_solutions = []  # Lista de soluções que esta solução domina
+        self.dominated_by_count = 0  # Por quantas soluções esta solução é dominada
+        self.rank = None  # Rank da solução nas frentes de Pareto
+        self.crowding_distance = None  # Distância de lotação da solução
+
 
 # fo
 if __name__ == '__main__':
@@ -84,9 +239,18 @@ if __name__ == '__main__':
     # arbitrages.append(Arbitrage("6454621f739da2ded2aaae7694e8835a", 59265,	59258, "ONEXBET", "NORDICBET",	2.08,	1.95, 0.64))
     # TODO Para o NSGA-II tem que normalizar para ficar com escala 0 a 1, para todas as funções objetivo.
 
-    individuo = Individual(arbitrages, 100)
-    individuo.check_fitness()
-    # for i in individuo.chromosome:
-    #     print(i, end=' ')
-    # print()
+    # individuo = Individual(arbitrages, 100)
+    population = Population(5, arbitrages, 100)
+    print(population.pareto_fronts)
+
+
+
+
+
+
+
+
+
+
+
 
