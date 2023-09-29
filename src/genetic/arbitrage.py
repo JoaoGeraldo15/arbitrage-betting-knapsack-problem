@@ -1,4 +1,5 @@
 import math
+import pickle
 import random
 from typing import List
 
@@ -110,7 +111,7 @@ class Individual:
 
 
 class Population:
-    def __init__(self, num_individuals, arbitrages, budget):
+    def __init__(self, arbitrages, budget, generations=10):
         """
         Inicializa a população de soluções no contexto do algoritmo NSGA-II.
 
@@ -119,37 +120,39 @@ class Population:
             arbitrages (list): É uma lista de objetos Arbitrage representando as oportunidades de arbitragem.
             budget (float): Orçamento disponível para alocação nas apostas.
         """
-        self.num_individuals = num_individuals
+
+        self.num_individuals = len(arbitrages)
         self.solutions: List[Individual] = []  # Lista de todas as soluções
         self.step_solutions: List[Individual] = []  # Lista auxiliar que será usada para construir a geração de filhos
-        self.high_fitness_evaluted = [0, 0]
+        self.high_fitness_evaluated = [0, 0]
         self.pareto_fronts = []  # Lista de listas representando as frentes de Pareto
         self.solutions_history: List = []
+        self.pareto_history_front = []
+        self.generations = generations
+        self.generation = 0
 
-        for _ in range(num_individuals):
+        for _ in range(self.num_individuals):
             individual = Individual(arbitrages, budget, init_population=True)
             self.solutions.append(individual)
 
-        self.__normalize_fitness_population(self.solutions)
-        self.__initialize_pareto_fronts()
-        self.__assign_rank()
-        self.__calculate_crowding_distance()
+        self.__main()
 
-    def main(self, t=10):
+    def __main(self):
+        self.__normalize_fitness_population(self.solutions)
+        self.__nsga_evaluation()
+        self.__commit_history_solutions()
+
         # Selecionar os pais e realizar cruzamento, mutação até ter uma população 2N
-        while t > 0:
-            print(f'Iteração: [{5-t}]')
+        while self.generation < self.generations:
             self.step_solutions = []
             while len(self.step_solutions) < self.num_individuals:  # Gerando os filhos
                 self.__uniform_crossover(self.__tournament_selection(), self.__tournament_selection())
             self.__normalize_fitness_population(self.step_solutions)
             self.solutions.extend(self.step_solutions[: self.num_individuals])
-            self.__initialize_pareto_fronts()
-            self.__assign_rank()
-            self.__calculate_crowding_distance()
+            self.__nsga_evaluation()
             self.__select_survivors()
             self.__commit_history_solutions()
-            t -= 1
+            self.generation += 1
 
     def __tournament_selection(self) -> Individual:
         tournament = random.sample(self.solutions, 2)
@@ -206,23 +209,25 @@ class Population:
 
     def __normalize_fitness_population(self, solutions: List[Individual]):
         num_objectives = len(solutions[0].fitness)
-        self.high_fitness_evaluted = [0 for _ in range(num_objectives)]
+        self.high_fitness_evaluated = [0 for _ in range(num_objectives)]
 
         for obj_index in range(num_objectives):
             for individual in solutions:
-                if individual.fitness[obj_index] > self.high_fitness_evaluted[obj_index]:
-                    self.high_fitness_evaluted[obj_index] = individual.fitness[obj_index]
+                if individual.fitness[obj_index] > self.high_fitness_evaluated[obj_index]:
+                    self.high_fitness_evaluated[obj_index] = individual.fitness[obj_index]
 
         for solution in solutions:
-            solution.normalize_fitness(self.high_fitness_evaluted)
+            solution.normalize_fitness(self.high_fitness_evaluated)
 
     def __initialize_pareto_fronts(self):
         """
             Inicializa as frentes de Pareto da população e identifica as soluções não dominadas na primeira frente.
        """
         # Inicialize as estruturas para armazenar as frentes de Pareto
+        self.pareto_fronts = []
         for solution in self.solutions:
             solution.dominated_by = []
+            solution.dominated_solutions = []
             solution.dominated_by_count = 0
 
         # Identifique as soluções não dominadas (frente de Pareto inicial)
@@ -231,12 +236,16 @@ class Population:
             is_dominated = False
             for solution2 in self.solutions:
                 if solution1 is not solution2:
-                    if (solution1.fitness_max_profit >= solution2.fitness_max_profit
-                            and solution1.fitness_diversification >= solution2.fitness_diversification):
+                    x1 = solution1.fitness_max_profit
+                    y1 = solution1.fitness_diversification
+
+                    x2 = solution2.fitness_max_profit
+                    y2 = solution2.fitness_diversification
+
+                    if ((x1 >= x2) and (y1 >= y2)) and ((x1 > x2) or (y1 > y2)):
                         solution1.dominated_solutions.append(solution2)
 
-                    elif (solution2.fitness_max_profit >= solution1.fitness_max_profit
-                          and solution2.fitness_diversification >= solution1.fitness_diversification):
+                    elif ((x2 >= x1) and (y2 >= y1)) and ((x2 > x1) or (y2 > y1)):
                         solution1.dominated_by.append(solution2)
                         solution1.dominated_by_count += 1
                         is_dominated = True
@@ -244,6 +253,9 @@ class Population:
             if not is_dominated:
                 solution1.rank = 1
                 pareto_front.append(solution1)
+
+        if len(pareto_front):
+            self.pareto_history_front.append((self.generation, pareto_front))
 
         self.pareto_fronts.append(pareto_front)
 
@@ -293,13 +305,13 @@ class Population:
 
         for front in self.pareto_fronts:
             front.sort(key=lambda x: (
-            x.rank, -x.crowding_distance))  # Ordena por rank crescente e crowding distance decrescente
+                x.rank, -x.crowding_distance))  # Ordena por rank crescente e crowding distance decrescente
             survivors.extend(front)
 
             if len(survivors) >= self.num_individuals:
                 break
 
-        return survivors[:self.num_individuals]  # Retorna os melhores indivíduos para a próxima geração
+        self.solutions = survivors[:self.num_individuals]  # Retorna os melhores indivíduos para a próxima geração
 
     def get_fitness_profit(self):
         return [individual.fitness_max_profit for individual in self.solutions]
@@ -311,6 +323,11 @@ class Population:
         profits = [i.fitness_normalized[0] for i in self.solutions]
         dispersations = [i.fitness_normalized[1] for i in self.solutions]
         self.solutions_history.append((profits, dispersations))
+
+    def __nsga_evaluation(self):
+        self.__initialize_pareto_fronts()
+        self.__assign_rank()
+        self.__calculate_crowding_distance()
 
 
 # class Solution:
@@ -357,5 +374,5 @@ if __name__ == '__main__':
     # TODO Para o NSGA-II tem que normalizar para ficar com escala 0 a 1, para todas as funções objetivo.
 
     # individuo = Individual(arbitrages, 100)
-    population = Population(5, arbitrages, 100)
-    population.main(5)
+    population = Population(arbitrages, 100)
+
