@@ -1,7 +1,50 @@
 import math
 import pickle
 import random
+from enum import Enum
 from typing import List
+
+import matplotlib
+from numpy.distutils.fcompiler import pg
+
+
+class CrossOverEnum(Enum):
+    UNIFORM_CROSSOVER = 1
+    UNIFORM_CROSSOVER_ONE_INDIVIDUAL = 2
+    ONE_POINT_CROSSOVER = 3
+
+
+class Plot:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def hv_plot(self, population):
+        reference_point = [1.1, 1.1]
+
+        x_values = [x for x, _ in population.pareto_history_front]
+        y_values = [pg.hypervolume([individual.fitness_normalized for individual in y]).compute(reference_point) for
+                    _, y in population.pareto_history_front]
+
+        # Invertendo a solução para melhorar a visualização já que é um problema de maximização
+        y_values_reversed = [
+            1 / pg.hypervolume([individual.fitness_normalized for individual in y]).compute(reference_point) for _, y in
+            population.pareto_history_front]
+        max_value = max(y_values_reversed)
+
+        y_values_reversed = [i / max_value for i in y_values_reversed]
+        self.generate_hv_plot(x_values, y_values, max(y_values) + 0.05)
+        self.generate_hv_plot(x_values, y_values_reversed, max(y_values_reversed) + 0.05)
+
+    def generate_hv_plot(self, x, y, y_axis_limit):
+        hv = matplotlib.pyplot
+        hv.xlabel('Generation')
+        hv.ylabel('Hypervolume')
+        hv.xlim(-1, max(x)+2)
+        hv.ylim(0, y_axis_limit)
+        hv.plot(x, y)
+        hv.grid(True)
+        hv.show()
 
 
 class Arbitrage:
@@ -97,6 +140,7 @@ class Individual:
         self.fitness.append(entropy)
 
     def evaluate_fitness(self):
+        self.fitness = []
         self.objective_function_max_profit()
         self.objective_function_diversification()
 
@@ -111,7 +155,7 @@ class Individual:
 
 
 class Population:
-    def __init__(self, arbitrages, budget, generations=10):
+    def __init__(self, arbitrages, budget, crossover_strategy: CrossOverEnum, generations=10):
         """
         Inicializa a população de soluções no contexto do algoritmo NSGA-II.
 
@@ -121,6 +165,7 @@ class Population:
             budget (float): Orçamento disponível para alocação nas apostas.
         """
 
+        self.crossover_strategy = crossover_strategy
         self.num_individuals = len(arbitrages)
         self.solutions: List[Individual] = []  # Lista de todas as soluções
         self.step_solutions: List[Individual] = []  # Lista auxiliar que será usada para construir a geração de filhos
@@ -146,7 +191,7 @@ class Population:
         while self.generation < self.generations:
             self.step_solutions = []
             while len(self.step_solutions) < self.num_individuals:  # Gerando os filhos
-                self.__uniform_crossover(self.__tournament_selection(), self.__tournament_selection())
+                self.__evolve(self.crossover_strategy, self.__tournament_selection(), self.__tournament_selection())
             self.__normalize_fitness_population(self.step_solutions)
             self.solutions.extend(self.step_solutions[: self.num_individuals])
             self.__nsga_evaluation()
@@ -154,12 +199,39 @@ class Population:
             self.__commit_history_solutions()
             self.generation += 1
 
+
+    def __evolve(self, enum: CrossOverEnum, parent_1: Individual, parent_2: Individual):
+        childes: List[Individual] = []
+        if enum.value == CrossOverEnum.UNIFORM_CROSSOVER:
+            childes = self.__uniform_crossover(parent_1, parent_2)
+        elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL:
+            childes = [self.__uniform_crossover_one_individual(parent_1, parent_2)]
+        else:
+            childes = self.__one_point_crossover(parent_1, parent_2)
+
+        for child in childes:
+            if random.random() < 0.05:
+                self.__mutation(child)
+
     def __tournament_selection(self) -> Individual:
         tournament = random.sample(self.solutions, 2)
         tournament.sort(key=lambda x: (x.rank, -x.crowding_distance))
         return tournament[0]
 
-    def __uniform_crossover(self, parent_1: Individual, parent_2: Individual):
+    def __mutation(self, child: Individual):
+        print('Mutou')
+        print(f'Antes: {child.chromosome} --> {child.fitness}')
+        random_index = random.randrange(len(child.chromosome))
+        if child.chromosome[random_index][0] == 1:
+            child.chromosome[random_index] = (0, child.chromosome[random_index][1])
+        else:
+            child.chromosome[random_index] = (1, child.chromosome[random_index][1])
+
+        child.normalize_budge_allocation()
+        child.evaluate_fitness()
+        print(f'Depois: {child.chromosome} --> {child.fitness}')
+
+    def __uniform_crossover(self, parent_1: Individual, parent_2: Individual) -> List[Individual]:
         child_1 = Individual(parent_1.arbitrages, parent_1.budget)
         child_2 = Individual(parent_1.arbitrages, parent_1.budget)
 
@@ -176,8 +248,9 @@ class Population:
         child_1.evaluate_fitness()
         child_2.evaluate_fitness()
         self.step_solutions.extend([child_1, child_2])
+        return [child_1, child_2]
 
-    def __uniform_crossover_one_individual(self, parent_1: Individual, parent_2: Individual):
+    def __uniform_crossover_one_individual(self, parent_1: Individual, parent_2: Individual) -> Individual:
         child = Individual(parent_1.arbitrages, parent_1.budget)
 
         for gene_parent_1, gene_parent_2 in zip(parent_1.chromosome, parent_2.chromosome):
@@ -189,8 +262,9 @@ class Population:
         child.normalize_budge_allocation()
         child.evaluate_fitness()
         self.step_solutions.append(child)
+        return child
 
-    def __one_point_crossover(self, parent_1: Individual, parent_2: Individual):
+    def __one_point_crossover(self, parent_1: Individual, parent_2: Individual) -> List[Individual]:
         cut_point_crossover = random.randrange(len(parent_1.chromosome))
 
         child_1_chromosome = parent_1.chromosome[:cut_point_crossover] + parent_2.chromosome[cut_point_crossover:]
@@ -206,6 +280,7 @@ class Population:
         child_1.evaluate_fitness()
         child_2.evaluate_fitness()
         self.step_solutions.extend([child_1, child_2])
+        return [child_1, child_2]
 
     def __normalize_fitness_population(self, solutions: List[Individual]):
         num_objectives = len(solutions[0].fitness)
