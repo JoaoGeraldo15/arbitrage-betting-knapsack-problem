@@ -1,6 +1,8 @@
 from typing import List
 
 from injectable import injectable
+from sqlalchemy import func
+from sqlalchemy.orm import aliased
 
 from src.config.connection import DBConnection
 from src.model.models import Surebet
@@ -23,3 +25,64 @@ class SurebetRepository:
         with (DBConnection() as db):
             return db.session.query(Surebet).filter(
                 Surebet.last_update_UNDER.between(start_date, end_date)).all()
+
+    def find_all_unique_between(self, start_date='2023-09-02 00:00:00', end_date='2023-09-02 23:59:59') -> List[Surebet]:
+        # Alias para usar a mesma tabela duas vezes
+        s1 = aliased(Surebet)
+        s2 = aliased(Surebet)
+
+        with DBConnection() as db:
+            subquery = (
+                db.session.query(
+                    s2.game_id,
+                    s2.bookmaker_key_OVER,
+                    s2.bookmaker_key_UNDER,
+                    func.max(s2.odd_OVER).label("max_odd_OVER")
+                )
+                .filter(
+                    s2.last_update_OVER > start_date,
+                    s2.last_update_OVER < end_date
+                )
+                .group_by(
+                    s2.game_id,
+                    s2.bookmaker_key_OVER,
+                    s2.bookmaker_key_UNDER
+                )
+                .subquery()
+            )
+
+            query = (
+                db.session.query(
+                    s1.game_id,
+                    s1.bookmaker_key_OVER,
+                    s1.bookmaker_key_UNDER,
+                    s1.odd_OVER,
+                    func.max(s1.odd_UNDER)
+                )
+                .filter(
+                    s1.last_update_OVER > start_date,
+                    s1.last_update_OVER < end_date,
+                    s1.game_id == subquery.c.game_id,
+                    s1.bookmaker_key_OVER == subquery.c.bookmaker_key_OVER,
+                    s1.bookmaker_key_UNDER == subquery.c.bookmaker_key_UNDER,
+                    s1.odd_OVER == subquery.c.max_odd_OVER
+                )
+                .group_by(
+                    s1.game_id,
+                    s1.bookmaker_key_OVER,
+                    s1.bookmaker_key_UNDER,
+                    s1.odd_OVER,
+                    subquery.c.max_odd_OVER
+                )
+            )
+
+
+            return query.all()
+
+
+if __name__ == '__main__':
+    repository = SurebetRepository()
+    results = repository.find_all_unique_between('2023-10-08', '2023-10-10')
+    print(len(results))
+    for result in results:
+        print(result)
