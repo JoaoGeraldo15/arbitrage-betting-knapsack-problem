@@ -25,7 +25,7 @@ def get_game_list() -> List[GameBase]:
     for arq in json_files:
         with open(arq, "r") as file:
             data = json.load(file)
-        games = [GameBase(**game) for game in data[0]]
+        games.extend([GameBase(**game) for game in data[0]])
     return games
 
 
