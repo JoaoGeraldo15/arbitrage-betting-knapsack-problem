@@ -16,7 +16,6 @@ class SurebetRepository:
             db.session.add_all(surebets)
             db.session.commit()
 
-
     def find_all(self) -> List[Surebet]:
         with (DBConnection() as db):
             return db.session.query(Surebet).all()
@@ -54,10 +53,15 @@ class SurebetRepository:
             query = (
                 db.session.query(
                     s1.game_id,
+                    s1.outcome_id_OVER,
+                    s1.outcome_id_UNDER,
                     s1.bookmaker_key_OVER,
                     s1.bookmaker_key_UNDER,
                     s1.odd_OVER,
-                    func.max(s1.odd_UNDER)
+                    func.max(s1.odd_UNDER),
+                    s1.profit,
+                    s1.last_update_OVER,
+                    s1.last_update_UNDER
                 )
                 .filter(
                     s1.last_update_OVER > start_date,
@@ -69,20 +73,36 @@ class SurebetRepository:
                 )
                 .group_by(
                     s1.game_id,
+                    s1.outcome_id_OVER,
+                    s1.outcome_id_UNDER,
                     s1.bookmaker_key_OVER,
                     s1.bookmaker_key_UNDER,
                     s1.odd_OVER,
-                    subquery.c.max_odd_OVER
+                    subquery.c.max_odd_OVER,
+                    s1.last_update_OVER,
+                    s1.last_update_UNDER,
+                    s1.profit
                 )
             )
 
-
-            return query.all()
+            result = set()
+            for i in query.all():
+                surebet = Surebet(i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7])
+                surebet.last_update_OVER = i[8]
+                surebet.last_update_UNDER = i[9]
+                result.add(surebet)
+            return list(result)
 
 
 if __name__ == '__main__':
     repository = SurebetRepository()
-    results = repository.find_all_unique_between('2023-10-08', '2023-10-10')
+    results = repository.find_all_unique_between('2023-10-09', '2023-10-10')
     print(len(results))
-    for result in results:
-        print(result)
+
+    # print(len(results))
+    # print(len(set(results)))
+    # dados = set()
+    for i in results:
+        print(i)
+    #     dados.add(Surebet(i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7]))
+    # print(len(dados))

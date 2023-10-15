@@ -160,6 +160,7 @@ class Event(Base):
 @dataclass
 class Surebet(Base):
     __tablename__ = "SUREBET"
+    id = Column("id", Integer, autoincrement=True, primary_key=True)
     game_id = Column("game_id", String, ForeignKey('GAME.id'), primary_key=True)
     outcome_id_OVER = Column("outcome_id_OVER", Integer, ForeignKey('OUTCOME.id'), primary_key=True)
     outcome_id_UNDER = Column("outcome_id_UNDER", Integer, ForeignKey('OUTCOME.id'), primary_key=True)
