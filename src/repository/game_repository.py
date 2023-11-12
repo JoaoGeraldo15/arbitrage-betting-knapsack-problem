@@ -33,3 +33,8 @@ class GameRepository:
                 .options(
                 selectinload(Game.bookmakers).selectinload(Bookmaker.markets).selectinload(Market.outcomes)).filter(
                 Game.id.in_(ids)).all()
+
+    def get_teams(self, ids: List[str]) ->  List[Game]:
+        with DBConnection() as db:
+            result = [{game.id: f'{game.home_team} x {game.away_team}'} for game in games]
+            return
