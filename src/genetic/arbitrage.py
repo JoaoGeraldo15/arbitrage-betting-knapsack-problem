@@ -11,7 +11,7 @@ import datetime
 import pygmo as pg
 
 from src.repository.surebet_repository import SurebetRepository
-from src.util import ExportadorDeGraficos
+from src.util import ExportadorDeGraficos, PickleSerializer
 
 
 class CrossOverEnum(Enum):
@@ -58,6 +58,8 @@ class Individual:
         self.fitness_normalized = []
         self.fitness_max_profit = None
         self.fitness_diversification = None
+        self.fitness_max_profit_normalized = None # usado na hora de montar a fronteira de pareto
+        self.fitness_diversification_normalized = None # usado na hora de montar a fronteira de pareto
         self.chromosome: list[tuple[int, float]] = []
         self.dominated_by = []  # Lista de soluções que dominam esta solução
         self.dominated_solutions = []  # Lista de soluções que esta solução domina
@@ -98,7 +100,7 @@ class Individual:
         for index in range(len(self.chromosome)):
             gene = self.chromosome[index]
             if gene[0] == 1:
-                fit += round(self.profits[index] * (gene[1] * self.budget), 2)
+                fit += round((self.profits[index]/100) * (gene[1] * self.budget), 2)
         self.fitness_max_profit = fit
         self.fitness.append(fit)
 
@@ -129,7 +131,7 @@ class Individual:
 
 class Population:
     def __init__(self, arbitrages, n_individuals, budget, crossover_strategy: CrossOverEnum, mutation_rate,
-                 n_generations=10):
+                 crossover_rate, n_generations):
         """
         Inicializa a população de soluções no contexto do algoritmo NSGA-II.
 
@@ -151,6 +153,11 @@ class Population:
         self.n_generations = n_generations
         self.generation = 0
         self.mutation_rate = mutation_rate
+        self.crossover_rate = crossover_rate
+        self.best_frontier = None
+        self.budget = budget
+        self.evolution_front = list()
+
 
         for _ in range(self.n_individuals):
             individual = Individual(arbitrages, budget, init_population=True)
@@ -169,7 +176,6 @@ class Population:
             self.step_solutions = []
             while len(self.step_solutions) < self.n_individuals:  # Gerando os filhos
                 self.__evolve(self.crossover_strategy, self.__tournament_selection(), self.__tournament_selection())
-                # self.__evolve(self.crossover_strategy, self.__roulette_selection(), self.__roulette_selection())
             # self.__normalize_fitness_population(self.step_solutions)
             self.solutions.extend(self.step_solutions[: self.n_individuals])
             self.__nsga_evaluation()
@@ -178,42 +184,34 @@ class Population:
             self.generation += 1
 
         self.__normalize_fitness()
-
-        self.export_solutions()
+        self.set_best_frontier()
+        # self.export_solutions()
 
     def __evolve(self, enum: CrossOverEnum, parent_1: Individual, parent_2: Individual):
         childes: List[Individual] = []
-        if enum.value == CrossOverEnum.UNIFORM_CROSSOVER:
-            childes = self.__uniform_crossover(parent_1, parent_2)
-        elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL:
-            childes = [self.__uniform_crossover_one_individual(parent_1, parent_2)]
-        elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL:
-            childes = self.__one_point_crossover(parent_1, parent_2)
+        if random.random() < self.crossover_rate:
+            if enum.value == CrossOverEnum.UNIFORM_CROSSOVER:
+                childes = self.__uniform_crossover(parent_1, parent_2)
+            elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL:
+                childes = [self.__uniform_crossover_one_individual(parent_1, parent_2)]
+            elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL:
+                childes = self.__one_point_crossover(parent_1, parent_2)
+            else:
+                childes = self.__two_point_crossover(parent_1, parent_2)
+
         else:
-            childes = self.__two_point_crossover(parent_1, parent_2)
+            childes = [parent_1, parent_2]
 
         for child in childes:
-            # if random.random() < 0.2:
             if random.random() < self.mutation_rate:
                 self.__mutation(child)
+
+        self.step_solutions.extend(childes)
 
     def __tournament_selection(self) -> Individual:
         tournament = random.sample(self.solutions, 2)
         tournament.sort(key=lambda x: (x.rank, -x.crowding_distance))
         return tournament[0]
-
-    def __roulette_selection(self) -> Individual:
-        total_crowding_distance = sum([i.crowding_distance for i in self.solutions])
-
-        # Gera um número aleatório entre 0 e total_crowding_distance
-        random_number = random.uniform(0, total_crowding_distance)
-
-        pointer = 0
-
-        for i in self.solutions:
-            pointer += i.crowding_distance
-            if pointer >= random_number:
-                return i
 
     def __mutation(self, child: Individual):
         random_index = random.randrange(len(child.chromosome))
@@ -241,7 +239,6 @@ class Population:
         child_2.normalize_budget_allocation()
         child_1.evaluate_fitness()
         child_2.evaluate_fitness()
-        self.step_solutions.extend([child_1, child_2])
         return [child_1, child_2]
 
     def __uniform_crossover_one_individual(self, parent_1: Individual, parent_2: Individual) -> Individual:
@@ -255,7 +252,6 @@ class Population:
 
         child.normalize_budget_allocation()
         child.evaluate_fitness()
-        self.step_solutions.append(child)
         return child
 
     def __one_point_crossover(self, parent_1: Individual, parent_2: Individual) -> List[Individual]:
@@ -273,7 +269,6 @@ class Population:
         child_2.normalize_budget_allocation()
         child_1.evaluate_fitness()
         child_2.evaluate_fitness()
-        self.step_solutions.extend([child_1, child_2])
         return [child_1, child_2]
 
     def __two_point_crossover(self, parent_1: Individual, parent_2: Individual) -> List[Individual]:
@@ -304,21 +299,20 @@ class Population:
         child_2.normalize_budget_allocation()
         child_1.evaluate_fitness()
         child_2.evaluate_fitness()
-        self.step_solutions.extend([child_1, child_2])
         return [child_1, child_2]
 
-    def __normalize_fitness_population(self, solutions: List[Individual]):
-        num_objectives = len(solutions[0].fitness)
-        self.high_fitness_evaluated = [0 for _ in range(num_objectives)]
-
-        for obj_index in range(num_objectives):
-            for individual in solutions:
-                if individual.fitness[obj_index] > self.high_fitness_evaluated[obj_index]:
-                    self.high_fitness_evaluated[obj_index] = individual.fitness[obj_index]
-
-        print(self.high_fitness_evaluated)
-        for solution in solutions:
-            solution.normalize_fitness(self.high_fitness_evaluated)
+    # def __normalize_fitness_population(self, solutions: List[Individual]):
+    #     num_objectives = len(solutions[0].fitness)
+    #     self.high_fitness_evaluated = [0 for _ in range(num_objectives)]
+    #
+    #     for obj_index in range(num_objectives):
+    #         for individual in solutions:
+    #             if individual.fitness[obj_index] > self.high_fitness_evaluated[obj_index]:
+    #                 self.high_fitness_evaluated[obj_index] = individual.fitness[obj_index]
+    #
+    #     print(self.high_fitness_evaluated)
+    #     for solution in solutions:
+    #         solution.normalize_fitness(self.high_fitness_evaluated)
 
     def __initialize_pareto_fronts(self):
         """
@@ -331,17 +325,34 @@ class Population:
             solution.dominated_solutions = []
             solution.dominated_by_count = 0
 
-        # Identifique as soluções não dominadas (frente de Pareto inicial)
+        # Normalizando os dados antes de definir o rank e as fronteiras, como isso é feito por geração
+        # Uma fronteira não será afetada por outra, além disso é necessário para o NSGA-II não tender
+        # para uma função objetivo por causa de sua magnutide.
+        max_profit = max([i.fitness_max_profit for i in self.solutions])
+        max_diversification = max([i.fitness_diversification for i in self.solutions])
+
+        for i in self.solutions:
+            if max_profit > 0:
+                i.fitness_max_profit_normalized = i.fitness_max_profit / max_profit
+            else:  # não houve seleção de surebets, logo o lucro normalizado deve ser 0
+                i.fitness_max_profit_normalized = 0
+
+            if max_diversification > 0:  # se for igual a zero, só 1 gene foi escolhido e a entropia deu 0
+                i.fitness_diversification_normalized = i.fitness_diversification / max_diversification
+            else:
+                i.fitness_diversification_normalized = 0
+
+        # Identifica as soluções não dominadas (frente de Pareto inicial)
         pareto_front = []
         for solution1 in self.solutions:
             is_dominated = False
             for solution2 in self.solutions:
                 if solution1 is not solution2:
-                    x1 = solution1.fitness_max_profit
-                    y1 = solution1.fitness_diversification
+                    x1 = solution1.fitness_max_profit_normalized
+                    y1 = solution1.fitness_diversification_normalized
 
-                    x2 = solution2.fitness_max_profit
-                    y2 = solution2.fitness_diversification
+                    x2 = solution2.fitness_max_profit_normalized
+                    y2 = solution2.fitness_diversification_normalized
 
                     if ((x1 >= x2) and (y1 >= y2)) and ((x1 > x2) or (y1 > y2)):
                         solution1.dominated_solutions.append(solution2)
@@ -396,6 +407,9 @@ class Population:
             min_fitness = sorted_solutions[0].fitness[obj_index]
             max_fitness = sorted_solutions[-1].fitness[obj_index]
 
+            if max_fitness == min_fitness: # Evitar divisão por zero se todos os valores forem iguais
+                continue
+
             for i in range(1, len(sorted_solutions) - 1):  # Excluindo o primeiro e último que já são infinitos
                 sorted_solutions[i].crowding_distance += (
                         (sorted_solutions[i + 1].fitness[obj_index] - sorted_solutions[i - 1].fitness[obj_index])
@@ -430,33 +444,36 @@ class Population:
         self.__assign_rank()
         self.__calculate_crowding_distance()
 
-    def get_hypervolume(self):
-        reference_point = [1.05, 1.05]
-        x_values = [x for x, _ in self.pareto_history_front]
-        y_values_reversed = [
-            1 / pg.hypervolume([individual.fitness_normalized for individual in y]).compute(reference_point) for
-            _, y in self.pareto_history_front]
-
-        max_value = max(y_values_reversed)
-        y_values_reversed = [i / max_value for i in y_values_reversed]
-        return y_values_reversed[-1], sum(y_values_reversed)/len(y_values_reversed)
+    # def get_hypervolume(self):
+    #     reference_point = [1.05, 1.05]
+    #     x_values = [x for x, _ in self.pareto_history_front]
+    #     y_values_reversed = [
+    #         1 / pg.hypervolume([individual.fitness_normalized for individual in y]).compute(reference_point) for
+    #         _, y in self.pareto_history_front]
+    #
+    #     max_value = max(y_values_reversed)
+    #     y_values_reversed = [i / max_value for i in y_values_reversed]
+    #     return y_values_reversed[-1], sum(y_values_reversed)/len(y_values_reversed)
 
     def export_solutions(self):
         export = ExportadorDeGraficos()
         export.hypervolume_plot(self)
         export.generate_gif(self)
+        PickleSerializer.save(self, f'{export.data_hora_atual}/pickle.pkl')
 
         x_data = []
         y_data = []
         for generation, front in self.pareto_history_front_normalized:
             x = [i[0] for i in front]
             y = [i[1] for i in front]
-            if generation == 0 or generation == self.n_generations - 1:
+            if generation == 0 or generation == self.n_generations - 1 or generation == self.best_frontier:
                 x_data.append(x)
                 y_data.append(y)
                 export.plot(x, y, generation)
 
     def __normalize_fitness(self):
+        # Gerando um histórico da fronteira de pareto por geração normalizada de acordo com o melhor valor
+        # geral das fronteiras
         profit_list = []
         dispersation_list = []
         for generation, front in self.pareto_history_front:
@@ -465,10 +482,14 @@ class Population:
 
         max_profit = max(profit_list)
         max_dispersation = max(dispersation_list)
-
+        self.high_fitness_evaluated = [max_profit, max_dispersation]
         for generation, front in self.pareto_history_front:
             fitness_normalized = [(i.fitness[0] / max_profit, i.fitness[1] / max_dispersation) for i in front]
             self.pareto_history_front_normalized.append((generation, fitness_normalized))
+
+    def set_best_frontier(self):
+        if self.best_frontier is None:
+            ExportadorDeGraficos.set_best_frontier(self)
 
 
 # fo
@@ -504,7 +525,7 @@ if __name__ == '__main__':
     # population = Population(arbitrages, 50, 100, crossover, 0.05, 200)
     for i in range(0, 9):
         print(f'{i + 1}º Simulation')
-        population = Population(arbitrages, 50, 100, crossover, 0.01, 200)
+        population = Population(arbitrages, 50, 100, crossover, 0.01, 1,200)
         simulations.append(population)
 
     export.hypervolume_plots(simulations, crossover.name)
