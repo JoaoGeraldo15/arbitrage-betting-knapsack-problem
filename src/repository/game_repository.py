@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Any
 
 from injectable import injectable
 from sqlalchemy.orm import selectinload
@@ -34,7 +34,7 @@ class GameRepository:
                 selectinload(Game.bookmakers).selectinload(Bookmaker.markets).selectinload(Market.outcomes)).filter(
                 Game.id.in_(ids)).all()
 
-    def get_teams(self, ids: List[str]) ->  List[Game]:
+    def get_teams(self, ids: List[str]) -> dict:
         with DBConnection() as db:
-            result = [{game.id: f'{game.home_team} x {game.away_team}'} for game in games]
-            return
+            list_games = db.session.query(Game).filter(Game.id.in_(ids)).all()
+            return { i.id : f'{i.home_team} x {i.away_team} [{i.sport_title}]' for i in list_games}
