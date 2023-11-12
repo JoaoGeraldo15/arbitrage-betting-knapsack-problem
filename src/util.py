@@ -69,7 +69,6 @@ class ExportadorDeGraficos:
         plt.xlabel('Profit')
         plt.ylabel('Dispersation')
         plt.scatter(x, y)
-        plt.grid(True)
         plt.savefig(self.data_hora_atual + '/' + self.get_file_name(generation, 'png'))
         plt.close()
 
@@ -98,7 +97,7 @@ class ExportadorDeGraficos:
     def __plot_hv(self, x, y, y_axis_limit, title, filename):
 
         plt = matplotlib.pyplot
-        plt.xlabel('Generation')
+        plt.xlabel('Generations')
         plt.ylabel('Hypervolume Score')
         plt.title(title)
         plt.xlim(-1, max(x) + 2)
@@ -114,6 +113,14 @@ class ExportadorDeGraficos:
         x_values = [x for x, _ in population.pareto_history_front_normalized]
         y_values = [1 / pg.hypervolume([i for i in y]).compute(reference_point) for _, y in
                     population.pareto_history_front_normalized]
+
+        pareto_evolution = []
+        for hypervolume, f in zip(y_values, population.pareto_history_front_normalized):
+            if len(pareto_evolution) == 0 or hypervolume > pareto_evolution[-1][0]:
+                pareto_evolution.append((hypervolume, f[1]))
+
+        pareto_evolution = [(hypervolume, sorted(front, key=lambda tup: tup[0])) for hypervolume, front in pareto_evolution]
+        population.evolution_front = pareto_evolution
 
         aux = y_values.copy()
         found = False
@@ -139,7 +146,7 @@ class ExportadorDeGraficos:
     def __config_sub_plot_hv(self) -> matplotlib.pyplot:
         plot_config = matplotlib.pyplot
         plot_config.figure(figsize=(16, 12))
-        plot_config.xlabel('Generation')
+        plot_config.xlabel('Generations')
         plot_config.ylabel('Hypervolume')
         return plot_config
 

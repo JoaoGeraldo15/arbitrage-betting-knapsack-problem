@@ -30,7 +30,7 @@ def obter_odd(opcao: str, outcomes: List[Outcome]) -> float:
 
 # Função para calcular a diferença de tempo entre duas atualizações
 def calcular_diferenca_tempo(atualizacao1, atualizacao2):
-    return abs((atualizacao1 - atualizacao2).total_seconds() / 60) <= 15
+    return abs((atualizacao1 - atualizacao2).total_seconds() / 60) <= 5
 
 
 # Função para gerar todas as combinações válidas
@@ -111,7 +111,7 @@ def obter_surebets(df_surebet: pd.DataFrame) -> List[Surebet]:
         arbitrage_2 = ((1 / odds_OVER_B) + (1 / odds_UNDER_A)) * 100
         game_id = item[0][GAME_COLUMN]
         if arbitrage_1 < 100:
-            print(item)
+            # print(item)
             outcome_id_over = item[0][OVER_COLUMN][0]
             outcome_id_under = item[1][UNDER_COLUMN][0]
             bookmaker_over = item[0][BOOKMAKER_COLUMN]
@@ -121,10 +121,10 @@ def obter_surebets(df_surebet: pd.DataFrame) -> List[Surebet]:
                               odds_UNDER_B, profit)
 
             arbitrages.append(surebet)
-            print(f'{round(arbitrage_1, 2)}% --> {item[0][OVER_COLUMN][0]} + {item[1][UNDER_COLUMN][0]}')
+            # print(f'{round(arbitrage_1, 2)}% --> {item[0][OVER_COLUMN][0]} + {item[1][UNDER_COLUMN][0]}')
 
         if arbitrage_2 < 100:
-            print(item)
+            # print(item)
             outcome_id_over = item[1][OVER_COLUMN][0]
             outcome_id_under = item[0][UNDER_COLUMN][0]
             bookmaker_over = item[1][BOOKMAKER_COLUMN]
@@ -133,7 +133,7 @@ def obter_surebets(df_surebet: pd.DataFrame) -> List[Surebet]:
             surebet = Surebet(game_id, outcome_id_over, outcome_id_under, bookmaker_over, bookmaker_under, odds_OVER_B,
                               odds_UNDER_A, profit)
             arbitrages.append(surebet)
-            print(f'{round(arbitrage_2, 2)}% --> {item[1][OVER_COLUMN][0]} + {item[0][UNDER_COLUMN][0]}')
+            # print(f'{round(arbitrage_2, 2)}% --> {item[1][OVER_COLUMN][0]} + {item[0][UNDER_COLUMN][0]}')
 
     return arbitrages
 
