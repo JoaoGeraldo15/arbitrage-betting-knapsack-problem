@@ -149,7 +149,9 @@ class Population:
         self.pareto_fronts = []  # Lista de listas representando as frentes de Pareto
         self.solutions_history: List = []
         self.pareto_history_front = []
+        self.pareto_history_front_negative = []
         self.pareto_history_front_normalized = []
+        self.pareto_history_front_normalized_negative = []  # histórico usado para gerar o hypervolume
         self.n_generations = n_generations
         self.generation = 0
         self.mutation_rate = mutation_rate
@@ -184,7 +186,6 @@ class Population:
             self.generation += 1
 
         self.__normalize_fitness()
-        self.set_best_frontier()
         # self.export_solutions()
 
     def __evolve(self, enum: CrossOverEnum, parent_1: Individual, parent_2: Individual):
@@ -199,12 +200,12 @@ class Population:
             else:
                 childes = self.__two_point_crossover(parent_1, parent_2)
 
+            for child in childes:
+                if random.random() < self.mutation_rate:
+                    self.__mutation(child)
+
         else:
             childes = [parent_1, parent_2]
-
-        for child in childes:
-            if random.random() < self.mutation_rate:
-                self.__mutation(child)
 
         self.step_solutions.extend(childes)
 
@@ -368,6 +369,7 @@ class Population:
 
         if len(pareto_front):
             self.pareto_history_front.append((self.generation, pareto_front))
+            self.pareto_history_front_negative.append((self.generation, [[-i.fitness[0], -i.fitness[1]] for i in pareto_front]))
 
         self.pareto_fronts.append(pareto_front)
 
@@ -463,9 +465,11 @@ class Population:
 
         x_data = []
         y_data = []
-        for generation, front in self.pareto_history_front_normalized:
-            x = [i[0] for i in front]
-            y = [i[1] for i in front]
+        for generation, front in self.pareto_history_front:
+            # x = [i[0] for i in front]
+            # y = [i[1] for i in front]
+            x = [i.fitness[0] for i in front]
+            y = [i.fitness[1] for i in front]
             if generation == 0 or generation == self.n_generations - 1 or generation == self.best_frontier:
                 x_data.append(x)
                 y_data.append(y)
@@ -485,11 +489,11 @@ class Population:
         self.high_fitness_evaluated = [max_profit, max_dispersation]
         for generation, front in self.pareto_history_front:
             fitness_normalized = [(i.fitness[0] / max_profit, i.fitness[1] / max_dispersation) for i in front]
-            self.pareto_history_front_normalized.append((generation, fitness_normalized))
+            fitness_normalized_nagative = [(-(i.fitness[0] / max_profit), -(i.fitness[1] / max_dispersation)) for i in front]
 
-    def set_best_frontier(self):
-        if self.best_frontier is None:
-            ExportadorDeGraficos.set_best_frontier(self)
+            self.pareto_history_front_normalized.append((generation, fitness_normalized))
+            self.pareto_history_front_normalized_negative.append((generation, fitness_normalized_nagative))
+
 
 
 # fo

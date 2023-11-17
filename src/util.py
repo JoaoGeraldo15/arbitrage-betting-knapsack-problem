@@ -63,8 +63,8 @@ class ExportadorDeGraficos:
     def plot(self, x, y, generation):
         plt = matplotlib.pyplot
         plt.figure()
-        # plt.xlim(min(x), 1.05)
-        # plt.ylim(min(y), 1.05)
+        # plt.xlim(0, 1.05)
+        # plt.ylim(0, 1.05)
         plt.title(f'{generation}° Generation')
         plt.xlabel('Profit')
         plt.ylabel('Dispersation')
@@ -76,20 +76,19 @@ class ExportadorDeGraficos:
         plt = matplotlib.pyplot
         metadata = dict(title='NSGA-II', artist='João Geraldo')
         writer = PillowWriter(fps=5, metadata=metadata)
-        fig = plt.figure()
-        l, = plt.plot([], [], 'ko', markersize=5)
-        plt.setp(l, color='#FF5500')
-        plt.xlim(0, 1.05)
-        plt.ylim(0, 1.05)
-        plt.xlabel('Profit')
-        plt.ylabel('Dispersation')
         file_name = self.data_hora_atual + '/' + self.get_file_name(population.n_generations, 'gif')
 
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, 1.05)
+        ax.set_ylim(0, 1.05)
+        ax.set_xlabel('Profit')
+        ax.set_ylabel('Dispersation')
+
         with writer.saving(fig, file_name, 100):
-            for i in range(len(population.solutions_history)):
-                # plt.title(f'{i}° Generation')
-                plt.title(f'Generation: {i}/{population.n_generations} Population: {population.n_individuals}')
-                l.set_data(population.solutions_history[i][0], [population.solutions_history[i][1]])
+            for i, solutions in enumerate(population.solutions_history):
+                ax.clear()
+                ax.set_title(f'Generation: {i}/{population.n_generations} Population: {population.n_individuals}')
+                ax.scatter(solutions[0], solutions[1], color='#FF5500', s=5)
                 writer.grab_frame()
 
         plt.close()
@@ -106,42 +105,29 @@ class ExportadorDeGraficos:
         plt.savefig(self.data_hora_atual + '/' + filename)
         plt.close()
 
-    @staticmethod
-    def set_best_frontier(population):
-        FITNESS_INDEX = 1
-        reference_point = [1.05, 1.05]
-        x_values = [x for x, _ in population.pareto_history_front_normalized]
-        y_values = [1 / pg.hypervolume([i for i in y]).compute(reference_point) for _, y in
-                    population.pareto_history_front_normalized]
-
-        pareto_evolution = []
-        for hypervolume, f in zip(y_values, population.pareto_history_front_normalized):
-            if len(pareto_evolution) == 0 or hypervolume > pareto_evolution[-1][0]:
-                pareto_evolution.append((hypervolume, f[1]))
-
-        pareto_evolution = [(hypervolume, sorted(front, key=lambda tup: tup[0])) for hypervolume, front in pareto_evolution]
-        population.evolution_front = pareto_evolution
-
-        aux = y_values.copy()
-        found = False
-        index = None
-        while found is False and len(aux) != 0:
-            index = aux.index(max(aux))
-            if len(set(population.pareto_history_front_normalized[index][FITNESS_INDEX])) < 5:
-                aux.pop(index)
-                continue
-            found = True
-
-        population.best_frontier = index  # Salvando a fronteira que teve o maior hypervolume e é viável
-
     def hypervolume_plot(self, population):
-        reference_point = [1.05, 1.05]
-        x_values = [x for x, _ in population.pareto_history_front_normalized]
-        y_values = [1 / pg.hypervolume([i for i in y]).compute(reference_point) for _, y in
-                             population.pareto_history_front_normalized]
+        x_values, y_values = self.calculate_hypervolume(population)
 
         title = f'Population: {population.n_individuals} Mutation: {population.mutation_rate}'
         self.__plot_hv(x_values, y_values, max(y_values) * 1.1, title, 'hypervolume.png')
+
+    def calculate_hypervolume(self, population):
+        reference_point = [0.05, 0.05]
+        x_values = []
+        y_values = []
+        pareto_evolution = []
+        for g, front in population.pareto_history_front_negative:
+            x_values.append(g)
+            hypervolume = pg.hypervolume(front).compute(reference_point)
+            y_values.append(hypervolume)
+
+            if len(pareto_evolution) == 0 or hypervolume > pareto_evolution[-1][0]:
+                pareto_evolution.append((hypervolume, [[-i[0], -i[1]] for i in front]))
+
+        population.evolution_front = pareto_evolution
+
+        population.best_frontier = y_values.index(max(y_values))
+        return x_values, y_values
 
     def __config_sub_plot_hv(self) -> matplotlib.pyplot:
         plot_config = matplotlib.pyplot
@@ -151,8 +137,6 @@ class ExportadorDeGraficos:
         return plot_config
 
     def hypervolume_plots(self, population_list: [], main_title: str):
-        reference_point = [1.05, 1.05]
-
         n_columns = 4
         n_rows = int(np.ceil(len(population_list) / n_columns))
 
@@ -160,19 +144,12 @@ class ExportadorDeGraficos:
         count = 1
 
         for population in population_list:
-            x_values = [x for x, _ in population.pareto_history_front_normalized]
-            y_values_reversed = [
-                1 / pg.hypervolume([i for i in y]).compute(reference_point) for
-                _, y in population.pareto_history_front_normalized]
+            x_values, y_values = self.calculate_hypervolume(population)
 
-            # max_value = max(y_values_reversed)
-            # y_values_reversed = [i / max_value for i in y_values_reversed]
-            # y_values_reversed = [math.log10(i + 1) for i in y_values_reversed]
             title = f'[P]: {population.n_individuals} [G]: {population.n_generations} [M]: {population.mutation_rate} [C]: {population.crossover_rate}'
 
             plt.subplot(n_rows, n_columns, count)
-            # plt.plot(x_values, y_values_reversed)
-            plt.scatter(x_values, y_values_reversed)
+            plt.scatter(x_values, y_values)
             plt.title(title)
             count += 1
 
@@ -186,7 +163,7 @@ class ExportadorDeGraficos:
         # imagem.show()
 
     def grid_hypervolume(self, population_list: [], params):
-        reference_point = [1.05, 1.05]
+        reference_point = [1.0, 1.0]
 
         # n_rows = int(np.ceil(np.sqrt(len(population_list))))
         # n_columns = int(np.ceil(len(population_list) / n_rows))
@@ -198,22 +175,12 @@ class ExportadorDeGraficos:
 
         count = 1
         for population in population_list:
-            x_values = [x for x, _ in population.pareto_history_front_normalized]
-            y_values_reversed = [
-                1 / pg.hypervolume([i for i in y]).compute(reference_point) for
-                _, y in population.pareto_history_front_normalized]
-
-            max_value = max(y_values_reversed)
-            y_values_reversed = [i / max_value for i in y_values_reversed]
+            x_values, y_values = self.calculate_hypervolume(population)
 
             title = f'[P]: {population.n_individuals} [G]: {population.n_generations} [M]: {population.mutation_rate} \n{population.crossover_strategy.name}'
 
-            # if population.n_individuals == params[0] and population.n_generations == params[1] and population.mutation_rate == params[2] and population.crossover_strategy == params[3]:
-            #     print(ax.spines)
-            #     ax.set_title(title, color='green')
-
             plt.subplot(n_rows, n_columns, count)
-            plt.plot(x_values, y_values_reversed)
+            plt.plot(x_values, y_values)
             plt.title(title)
 
             if population.n_individuals == params[0] and population.n_generations == params[
@@ -231,10 +198,5 @@ class ExportadorDeGraficos:
         # imagem.show()
 
     def get_max_hypervolume(self, population):
-        reference_point = [1.05, 1.05]
-        x_values = [x for x, _ in population.pareto_history_front_normalized]
-        y_values_reversed = [
-            1 / pg.hypervolume([i for i in y]).compute(reference_point) for
-            _, y in population.pareto_history_front_normalized]
-
-        return max(y_values_reversed)
+        _, y_values = self.calculate_hypervolume(population)
+        return max(y_values)

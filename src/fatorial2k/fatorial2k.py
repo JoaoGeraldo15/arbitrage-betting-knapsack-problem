@@ -1,6 +1,7 @@
 import time
 import uuid
 
+
 from tqdm import tqdm
 from src.genetic.arbitrage import CrossOverEnum, Population
 from src.repository.surebet_repository import SurebetRepository
@@ -80,10 +81,10 @@ def fatorial_2k(crossover, filename, callback_config, arbitrages):
 
 
 def config_fatorial_2k_v1() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [200, 100]
-    n_individuals = [100, 50]
-    mutation_rate = [0.05, 0.03]
-    crossover_rate = [1, 0.95]
+    n_generations = [500, 50]
+    n_individuals = [250, 10]
+    mutation_rate = [0.5, 0.05]
+    crossover_rate = [0.95, 0.70]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
@@ -98,28 +99,28 @@ def config_fatorial_2k_v2() -> tuple[list[int], list[int], list[float], list[flo
 
 
 def config_fatorial_2k_one_point_v2() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [220, 120]
-    n_individuals = [80, 30]
-    mutation_rate = [0.02, 0.04]
-    crossover_rate = [1.0, 0.95]
+    n_generations = [250, 25]
+    n_individuals = [125, 50]
+    mutation_rate = [0.25, 0.05]
+    crossover_rate = [0.95, 0.80]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
 
 def config_fatorial_2k_one_point_v3() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [240, 140]
-    n_individuals = [50, 20]
-    mutation_rate = [0.02, 0.01]
-    crossover_rate = [0.95]
+    n_generations = [300, 100]
+    n_individuals = [150, 80]
+    mutation_rate = [0.10, 0.02]
+    crossover_rate = [0.98, 0.95]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
 
 def config_fatorial_2k_one_point_v4() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [300, 100]
-    n_individuals = [50, 20]
+    n_generations = [250, 150]
+    n_individuals = [200, 40]
     mutation_rate = [0.05, 0.01]
-    crossover_rate = [1, 0.95]
+    crossover_rate = [0.98, 0.96]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
@@ -134,28 +135,28 @@ def config_fatorial_2k_v3() -> tuple[list[int], list[int], list[float], list[flo
 
 
 def config_fatorial_2k_two_points_v2() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [180, 120]
-    n_individuals = [80, 30]
-    mutation_rate = [0.02, 0.04]
-    crossover_rate = [1.0, 0.95]
+    n_generations = [250, 25]
+    n_individuals = [125, 50]
+    mutation_rate = [0.25, 0.05]
+    crossover_rate = [0.95, 0.80]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
 
 def config_fatorial_2k_two_points_v3() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [160, 140]
-    n_individuals = [60, 20]
-    mutation_rate = [0.04, 0.03]
-    crossover_rate = [1.0, 0.95]
+    n_generations = [300, 100]
+    n_individuals = [150, 80]
+    mutation_rate = [0.10, 0.02]
+    crossover_rate = [0.98, 0.95]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
 
 def config_fatorial_2k_two_points_v4() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [180, 160]
-    n_individuals = [40, 20]
-    mutation_rate = [0.03, 0.02]
-    crossover_rate = [1.0, 0.95]
+    n_generations = [250, 150]
+    n_individuals = [200, 40]
+    mutation_rate = [0.05, 0.01]
+    crossover_rate = [0.98, 0.96]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
@@ -165,7 +166,7 @@ def projeto_fatorial_one_point(arbitrages):
     fatorial_2k(crossover, crossover.name + "_fatorial_v1", config_fatorial_2k_v1, arbitrages)
     fatorial_2k(crossover, crossover.name + "_fatorial_v2", config_fatorial_2k_one_point_v2, arbitrages)
     fatorial_2k(crossover, crossover.name + "_fatorial_v3", config_fatorial_2k_one_point_v3, arbitrages)
-    fatorial_2k(crossover, crossover.name + f"_fatorial_{str(uuid.uuid4())[:10]}", config_fatorial_2k_one_point_v4, arbitrages)
+    fatorial_2k(crossover, crossover.name + f"_fatorial_v4", config_fatorial_2k_one_point_v4, arbitrages)
 
 
 def projeto_fatorial_two_points(arbitrages):
@@ -173,31 +174,38 @@ def projeto_fatorial_two_points(arbitrages):
     fatorial_2k(crossover, crossover.name + "_fatorial_v1", config_fatorial_2k_v1, arbitrages)
     fatorial_2k(crossover, crossover.name + "_fatorial_v2", config_fatorial_2k_two_points_v2, arbitrages)
     fatorial_2k(crossover, crossover.name + "_fatorial_v3", config_fatorial_2k_two_points_v3, arbitrages)
+    fatorial_2k(crossover, crossover.name + "_fatorial_v4", config_fatorial_2k_two_points_v4, arbitrages)
 
 
 def config_fatorial_2k_uniform_points_v2() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [220, 120]
+    n_generations = [250, 25]
+    n_individuals = [125, 50]
+    mutation_rate = [0.25, 0.05]
+    crossover_rate = [0.95, 0.80]
+
+    return n_generations, n_individuals, mutation_rate, crossover_rate
+
+def config_fatorial_2k_uniform_points_v4() -> tuple[list[int], list[int], list[float], list[float]]:
+    n_generations = [250, 100]
     n_individuals = [80, 30]
     mutation_rate = [0.02, 0.04]
     crossover_rate = [1.0, 0.95]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
-
 def config_fatorial_2k_uniform_points_v3() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [240, 140]
-    n_individuals = [60, 20]
-    mutation_rate = [0.04, 0.03]
-    crossover_rate = [1.0, 0.95]
+    n_generations = [300, 100]
+    n_individuals = [150, 80]
+    mutation_rate = [0.10, 0.02]
+    crossover_rate = [0.98, 0.95]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
-
 def config_fatorial_2k_uniform_points_v4() -> tuple[list[int], list[int], list[float], list[float]]:
-    n_generations = [160, 100]
-    n_individuals = [30, 15]
-    mutation_rate = [0.02, 0.005]
-    crossover_rate = [0.95, 0.75]
+    n_generations = [250, 150]
+    n_individuals = [200, 40]
+    mutation_rate = [0.05, 0.01]
+    crossover_rate = [0.98, 0.96]
 
     return n_generations, n_individuals, mutation_rate, crossover_rate
 
@@ -207,6 +215,7 @@ def projeto_fatorial_uniform_points(arbitrages):
     fatorial_2k(crossover, crossover.name + "_fatorial_v1", config_fatorial_2k_v1, arbitrages)
     fatorial_2k(crossover, crossover.name + "_fatorial_v2", config_fatorial_2k_uniform_points_v2, arbitrages)
     fatorial_2k(crossover, crossover.name + "_fatorial_v3", config_fatorial_2k_uniform_points_v3, arbitrages)
+    fatorial_2k(crossover, crossover.name + "_fatorial_v4", config_fatorial_2k_uniform_points_v4, arbitrages)
 
 
 if __name__ == '__main__':
@@ -214,7 +223,6 @@ if __name__ == '__main__':
     start_date = '2023-09-01 19:00:00'
     end_date = '2023-09-01 20:00:00'
     arbitrages = repository.find_all_unique_between(start_date, end_date)
-
     projeto_fatorial_one_point(arbitrages)
     projeto_fatorial_two_points(arbitrages)
     projeto_fatorial_uniform_points(arbitrages)

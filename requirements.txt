@@ -11,3 +11,5 @@ pandas~=1.5.3
 matplotlib
 pillow
 pygmo
+tqdm
+pandas
