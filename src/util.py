@@ -101,6 +101,7 @@ class ExportadorDeGraficos:
         plt.title(title)
         plt.xlim(-1, max(x) + 2)
         plt.ylim(0, y_axis_limit)
+        plt.xticks([i for i in range(0, len(x)+1, 15)])
         plt.scatter(x, y, s=15)
         plt.savefig(self.data_hora_atual + '/' + filename)
         plt.close()
