@@ -191,11 +191,11 @@ class Population:
     def __evolve(self, enum: CrossOverEnum, parent_1: Individual, parent_2: Individual):
         childes: List[Individual] = []
         if random.random() < self.crossover_rate:
-            if enum.value == CrossOverEnum.UNIFORM_CROSSOVER:
+            if enum.value == CrossOverEnum.UNIFORM_CROSSOVER.value:
                 childes = self.__uniform_crossover(parent_1, parent_2)
-            elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL:
+            elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL.value:
                 childes = [self.__uniform_crossover_one_individual(parent_1, parent_2)]
-            elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL:
+            elif enum.value == CrossOverEnum.UNIFORM_CROSSOVER_ONE_INDIVIDUAL.value:
                 childes = self.__one_point_crossover(parent_1, parent_2)
             else:
                 childes = self.__two_point_crossover(parent_1, parent_2)
