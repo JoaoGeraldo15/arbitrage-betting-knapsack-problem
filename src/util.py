@@ -65,9 +65,9 @@ class ExportadorDeGraficos:
         plt.figure()
         # plt.xlim(0, 1.05)
         # plt.ylim(0, 1.05)
-        plt.title(f'{generation}° Generation')
-        plt.xlabel('Profit')
-        plt.ylabel('Dispersation')
+        plt.title(f'{generation}° Geração')
+        plt.xlabel('Lucro')
+        plt.ylabel('Distribuição de surebets')
         plt.scatter(x, y)
         plt.savefig(self.data_hora_atual + '/' + self.get_file_name(generation, 'png'))
         plt.close()
@@ -81,13 +81,13 @@ class ExportadorDeGraficos:
         fig, ax = plt.subplots()
         ax.set_xlim(0, 1.05)
         ax.set_ylim(0, 1.05)
-        ax.set_xlabel('Profit')
-        ax.set_ylabel('Dispersation')
+        ax.set_xlabel('Lucro')
+        ax.set_ylabel('Distribuição de surebets')
 
         with writer.saving(fig, file_name, 100):
             for i, solutions in enumerate(population.solutions_history):
                 ax.clear()
-                ax.set_title(f'Generation: {i}/{population.n_generations} Population: {population.n_individuals}')
+                ax.set_title(f'Gerações: {i}/{population.n_generations} População: {population.n_individuals}')
                 ax.scatter(solutions[0], solutions[1], color='#FF5500', s=5)
                 writer.grab_frame()
 
@@ -96,8 +96,8 @@ class ExportadorDeGraficos:
     def __plot_hv(self, x, y, y_axis_limit, title, filename):
 
         plt = matplotlib.pyplot
-        plt.xlabel('Generations')
-        plt.ylabel('Hypervolume Score')
+        plt.xlabel('Gerações')
+        plt.ylabel('Valor do Hypervolume')
         plt.title(title)
         plt.xlim(-1, max(x) + 2)
         plt.ylim(0, y_axis_limit)
@@ -109,7 +109,7 @@ class ExportadorDeGraficos:
     def hypervolume_plot(self, population):
         x_values, y_values = self.calculate_hypervolume(population)
 
-        title = f'Population: {population.n_individuals} Mutation: {population.mutation_rate}'
+        title = f'Tamanho da população: {population.n_individuals} Taxa de Mutação: {population.mutation_rate}'
         self.__plot_hv(x_values, y_values, max(y_values) * 1.1, title, 'hypervolume.png')
 
     def calculate_hypervolume(self, population):
@@ -133,7 +133,7 @@ class ExportadorDeGraficos:
     def __config_sub_plot_hv(self) -> matplotlib.pyplot:
         plot_config = matplotlib.pyplot
         plot_config.figure(figsize=(16, 12))
-        plot_config.xlabel('Generations')
+        plot_config.xlabel('Gerações')
         plot_config.ylabel('Hypervolume')
         return plot_config
 
